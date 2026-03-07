@@ -74,7 +74,7 @@ tasks:
     milestone: M1
     title: AI 三能力（初始/展开/重写）
     depends_on: [BOOT-05]
-    status: waiting
+    status: done
   - id: CORE-04
     milestone: M1
     title: Markdown 导出

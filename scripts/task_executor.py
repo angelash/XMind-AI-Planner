@@ -1,7 +1,9 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
+import argparse
 from dataclasses import dataclass
 from pathlib import Path
+import subprocess
 from typing import Any
 
 import yaml
@@ -78,6 +80,41 @@ def run_one_cycle(path: Path) -> str:
     return f"done: {next_task}"
 
 
+def has_git_changes(repo_root: Path) -> bool:
+    result = subprocess.run(
+        ["git", "-C", str(repo_root), "status", "--porcelain"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return bool(result.stdout.strip())
+
+
+def commit_and_push(repo_root: Path, task_id: str) -> str:
+    if not has_git_changes(repo_root):
+        return "no-op: clean tree"
+
+    subprocess.run(["git", "-C", str(repo_root), "add", "-A"], check=True)
+    subprocess.run(
+        ["git", "-C", str(repo_root), "commit", "-m", f"chore(task): complete {task_id}"],
+        check=True,
+    )
+    subprocess.run(["git", "-C", str(repo_root), "push", "origin", "main"], check=True)
+    return "committed+pushed"
+
+
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
     default_path = Path(__file__).resolve().parents[1] / "automation_tasks.yaml"
-    print(run_one_cycle(default_path))
+    parser.add_argument("--tasks-file", default=str(default_path))
+    parser.add_argument("--git-commit-push", action="store_true")
+    args = parser.parse_args()
+
+    tasks_file = Path(args.tasks_file)
+    message = run_one_cycle(tasks_file)
+    print(message)
+
+    if args.git_commit_push and message.startswith("done: "):
+        task_id = message.split("done: ", 1)[1].strip()
+        repo_root = tasks_file.resolve().parent
+        print(commit_and_push(repo_root, task_id))

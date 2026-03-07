@@ -1,6 +1,9 @@
 ﻿project: XMind-AI-Planner
 mode: pure_ai_continuous
 completion_rule: all_tasks_done_and_release_verified
+git_policy:
+  commit_push_on_each_task_done: true
+  commit_message_template: "chore(task): complete {task_id}"
 check:
   interval_minutes: 5
   policy:

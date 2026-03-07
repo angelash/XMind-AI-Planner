@@ -6,6 +6,7 @@ def test_frontend_bootstrap_files_exist() -> None:
     assert (root / "frontend" / "index.html").exists()
     assert (root / "frontend" / "src" / "main.js").exists()
     assert (root / "frontend" / "src" / "styles.css").exists()
+    assert (root / "frontend" / "src" / "nodeModel.js").exists()
 
 
 def test_frontend_contains_mindmap_mount() -> None:
@@ -14,3 +15,4 @@ def test_frontend_contains_mindmap_mount() -> None:
     js = (root / "frontend" / "src" / "main.js").read_text(encoding="utf-8")
     assert 'id="mindmap"' in html
     assert "MindElixir" in js
+    assert "toMindElixirDocument" in js

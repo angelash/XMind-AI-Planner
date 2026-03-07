@@ -1,12 +1,18 @@
-﻿const mount = document.getElementById("mindmap");
+﻿import { toMindElixirDocument } from "./nodeModel.js";
+
+const mount = document.getElementById("mindmap");
 const fallback = document.getElementById("fallback");
 
-const defaultData = {
-  nodeData: {
-    id: "root",
-    topic: "XMind AI Planner",
-    children: [{ id: "child-1", topic: "First Idea" }],
-  },
+const defaultNode = {
+  id: "node-root",
+  text: "XMind AI Planner",
+  children: [
+    {
+      id: "node-child-1",
+      text: "First Idea",
+      memo: "Initial example branch",
+    },
+  ],
 };
 
 function showFallback(message) {
@@ -24,7 +30,7 @@ if (window.MindElixir && mount) {
     nodeMenu: true,
     keypress: true,
   });
-  mind.init(defaultData);
+  mind.init(toMindElixirDocument(defaultNode));
 } else {
   showFallback(
     "MindElixir is not available in this environment. Mount point is ready for integration."

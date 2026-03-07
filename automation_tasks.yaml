@@ -64,7 +64,7 @@ tasks:
     milestone: M1
     title: Node 模型与转换层
     depends_on: [BOOT-03]
-    status: waiting
+    status: build_ok
   - id: CORE-02
     milestone: M1
     title: 基础编辑能力
@@ -315,3 +315,7 @@ tasks:
       - GAP-08
       - GAP-09
     status: waiting
+
+
+
+

@@ -69,7 +69,7 @@ tasks:
     milestone: M1
     title: 基础编辑能力
     depends_on: [CORE-01]
-    status: waiting
+    status: done
   - id: CORE-03
     milestone: M1
     title: AI 三能力（初始/展开/重写）

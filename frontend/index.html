@@ -13,6 +13,16 @@
       <p>Frontend bootstrap with MindElixir mount point.</p>
     </header>
     <main>
+      <section class="editor-toolbar" aria-label="Mind map editor toolbar">
+        <button id="btn-add-child" type="button">Add Child</button>
+        <button id="btn-edit-node" type="button">Edit Node</button>
+        <button id="btn-delete-node" type="button">Delete Node</button>
+        <button id="btn-toggle-fold" type="button">Toggle Fold</button>
+        <button id="btn-zoom-in" type="button">Zoom In</button>
+        <button id="btn-zoom-out" type="button">Zoom Out</button>
+        <button id="btn-center" type="button">Center</button>
+        <span id="editor-status" class="editor-status">No node selected</span>
+      </section>
       <section id="mindmap" class="mindmap-canvas"></section>
       <pre id="fallback" class="fallback hidden"></pre>
     </main>

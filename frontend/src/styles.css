@@ -18,6 +18,33 @@ main {
   padding: 16px 24px;
 }
 
+.editor-toolbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.editor-toolbar button {
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #0f172a;
+  border-radius: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.editor-toolbar button:hover {
+  background: #f8fafc;
+}
+
+.editor-status {
+  margin-left: auto;
+  font-size: 13px;
+  color: #334155;
+}
+
 .mindmap-canvas {
   min-height: 560px;
   border: 1px solid #d0d7de;

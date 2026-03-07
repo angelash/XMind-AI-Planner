@@ -1,0 +1,6 @@
+[user]
+    name = Codex Automation
+    email = codex-automation@local
+
+[url "https://github.com/"]
+    insteadOf = git@github.com:

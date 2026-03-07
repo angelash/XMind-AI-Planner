@@ -1,0 +1,39 @@
+﻿:root {
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  color: #1b1f24;
+  background: #f4f7fb;
+}
+
+body {
+  margin: 0;
+}
+
+.app-header {
+  padding: 16px 24px;
+  background: #0e7490;
+  color: #ffffff;
+}
+
+main {
+  padding: 16px 24px;
+}
+
+.mindmap-canvas {
+  min-height: 560px;
+  border: 1px solid #d0d7de;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.fallback {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  background: #fff7ed;
+  color: #9a3412;
+  border: 1px solid #fed7aa;
+}
+
+.hidden {
+  display: none;
+}

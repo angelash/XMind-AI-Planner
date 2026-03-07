@@ -1,4 +1,4 @@
-project: XMind-AI-Planner
+﻿project: XMind-AI-Planner
 mode: pure_ai_continuous
 completion_rule: all_tasks_done_and_release_verified
 check:
@@ -21,42 +21,42 @@ tasks:
     milestone: M0
     title: 初始化目录结构
     depends_on: []
-    status: waiting
+    status: done
   - id: BOOT-02
     milestone: M0
     title: FastAPI 应用骨架与路由分层
     depends_on: [BOOT-01]
-    status: waiting
+    status: done
   - id: BOOT-03
     milestone: M0
     title: 前端骨架与 MindElixir 挂载
     depends_on: [BOOT-01]
-    status: waiting
+    status: done
   - id: BOOT-04
     milestone: M0
     title: SQLite 与迁移框架
     depends_on: [BOOT-02]
-    status: waiting
+    status: done
   - id: BOOT-05
     milestone: M0
     title: 配置中心与环境变量
     depends_on: [BOOT-02]
-    status: waiting
+    status: done
   - id: BOOT-06
     milestone: M0
     title: 日志与全局异常处理
     depends_on: [BOOT-02]
-    status: waiting
+    status: done
   - id: BOOT-07
     milestone: M0
     title: CI 流水线
     depends_on: [BOOT-01]
-    status: waiting
+    status: done
   - id: BOOT-08
     milestone: M0
     title: 自动化执行器最小闭环
     depends_on: [BOOT-07]
-    status: waiting
+    status: done
   - id: CORE-01
     milestone: M1
     title: Node 模型与转换层

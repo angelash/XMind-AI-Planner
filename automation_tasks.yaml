@@ -84,7 +84,7 @@ tasks:
     milestone: M1
     title: Word 导出
     depends_on: [CORE-04]
-    status: waiting
+    status: done
   - id: CORE-06
     milestone: M1
     title: 离线资源部署

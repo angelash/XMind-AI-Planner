@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import base64
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from app.services.markdown_export import render_markdown
+from app.services.word_export import render_docx
 
 router = APIRouter()
 
@@ -21,3 +23,15 @@ def export_markdown(payload: MarkdownExportRequest) -> dict[str, str]:
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {'markdown': markdown}
+
+
+@router.post('/word')
+def export_word(payload: MarkdownExportRequest) -> dict[str, str]:
+    try:
+        docx_bytes = render_docx(payload.root)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {
+        "filename": "mindmap.docx",
+        "docx_base64": base64.b64encode(docx_bytes).decode("ascii"),
+    }

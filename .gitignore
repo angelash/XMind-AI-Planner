@@ -5,3 +5,7 @@ MANUAL_TAKEOVER_QUEUE.jsonl
 MANUAL_TAKEOVER.flag
 __pycache__/
 *.pyc
+
+# local venv
+.venv/
+DEV_GUARD.log

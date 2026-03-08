@@ -95,3 +95,36 @@ def test_merge_markdown_route_requires_existing_document(monkeypatch, tmp_path: 
 
     assert response.status_code == 404
     assert response.json()["detail"] == "document not found"
+
+
+def test_markdown_directory_import_route_creates_documents(monkeypatch, tmp_path: Path) -> None:
+    _configure_temp_db(monkeypatch, tmp_path)
+
+    response = client.post(
+        "/api/v1/import/markdown/directory",
+        json={
+            "owner_id": "u-200",
+            "files": [
+                {"path": "docs/plan.md", "markdown": "# Plan\n- Scope"},
+                {"path": "docs/risks.md", "markdown": "# Risks\n- Delay"},
+            ],
+        },
+    )
+
+    assert response.status_code == 201
+    payload = response.json()
+    assert payload["stats"] == {"total": 2, "created": 2, "failed": 0}
+    assert len(payload["results"]) == 2
+    assert payload["results"][0]["status"] == "created"
+    assert payload["results"][0]["document"]["owner_id"] == "u-200"
+
+
+def test_markdown_directory_import_route_requires_files(monkeypatch, tmp_path: Path) -> None:
+    _configure_temp_db(monkeypatch, tmp_path)
+
+    response = client.post(
+        "/api/v1/import/markdown/directory",
+        json={"files": []},
+    )
+
+    assert response.status_code == 422

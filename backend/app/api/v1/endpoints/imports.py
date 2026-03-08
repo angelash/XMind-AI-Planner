@@ -6,6 +6,10 @@ from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
 from app.services.document_store import create_document, get_document, update_document
+from app.services.markdown_directory_import import (
+    MarkdownDirectoryImportFile,
+    import_markdown_directory,
+)
 from app.services.markdown_import import import_markdown
 from app.services.markdown_merge_import import merge_markdown_into_document
 
@@ -22,6 +26,17 @@ class MarkdownMergeImportRequest(BaseModel):
     document_id: str = Field(min_length=1)
     markdown: str = Field(min_length=1)
     title: str | None = Field(default=None, min_length=1, max_length=200)
+
+
+class MarkdownDirectoryImportFileRequest(BaseModel):
+    path: str = Field(min_length=1)
+    markdown: str = Field(min_length=1)
+    title: str | None = Field(default=None, min_length=1, max_length=200)
+
+
+class MarkdownDirectoryImportRequest(BaseModel):
+    files: list[MarkdownDirectoryImportFileRequest] = Field(min_length=1)
+    owner_id: str | None = None
 
 
 @router.post('/markdown', status_code=status.HTTP_201_CREATED)
@@ -62,5 +77,27 @@ def merge_markdown_document(payload: MarkdownMergeImportRequest) -> dict[str, An
 
     return {
         "document": updated,
+        "stats": stats.to_dict(),
+    }
+
+
+@router.post('/markdown/directory', status_code=status.HTTP_201_CREATED)
+def import_markdown_directory_documents(payload: MarkdownDirectoryImportRequest) -> dict[str, Any]:
+    files = [
+        MarkdownDirectoryImportFile(
+            path=item.path,
+            markdown=item.markdown,
+            title=item.title,
+        )
+        for item in payload.files
+    ]
+
+    try:
+        results, stats = import_markdown_directory(files, payload.owner_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    return {
+        "results": [item.to_dict() for item in results],
         "stats": stats.to_dict(),
     }

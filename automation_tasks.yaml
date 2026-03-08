@@ -140,7 +140,7 @@ tasks:
   title: 鎵归噺鐩綍瀵煎叆
   depends_on:
   - IMP-01
-  status: waiting
+  status: done
 - id: AUTH-01
   milestone: M2
   title: 宸ュ彿鐧诲綍/JWT/Cookie

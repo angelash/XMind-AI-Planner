@@ -99,7 +99,7 @@ tasks:
     milestone: M2
     title: 文档 CRUD
     depends_on: [BOOT-04]
-    status: waiting
+    status: done
   - id: DOC-02
     milestone: M2
     title: 分享链接与可编辑分享页

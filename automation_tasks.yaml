@@ -104,7 +104,7 @@ tasks:
     milestone: M2
     title: 分享链接与可编辑分享页
     depends_on: [DOC-01]
-    status: waiting
+    status: done
   - id: IMP-01
     milestone: M2
     title: Markdown 导入

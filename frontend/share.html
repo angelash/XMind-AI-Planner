@@ -1,0 +1,25 @@
+﻿<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>XMind AI Planner Share</title>
+    <link rel="stylesheet" href="./src/styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <h1>Shared Document</h1>
+      <p id="share-status">Loading shared document...</p>
+    </header>
+    <main>
+      <section class="share-panel" aria-label="Shared document editor">
+        <label for="share-title">Title</label>
+        <input id="share-title" type="text" maxlength="200" />
+        <label for="share-content">Content JSON</label>
+        <textarea id="share-content" rows="20"></textarea>
+        <button id="share-save" type="button">Save Now</button>
+      </section>
+    </main>
+    <script type="module" src="./src/share.js"></script>
+  </body>
+</html>

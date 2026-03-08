@@ -4,7 +4,9 @@
 def test_frontend_bootstrap_files_exist() -> None:
     root = Path(__file__).resolve().parents[1]
     assert (root / "frontend" / "index.html").exists()
+    assert (root / "frontend" / "share.html").exists()
     assert (root / "frontend" / "src" / "main.js").exists()
+    assert (root / "frontend" / "src" / "share.js").exists()
     assert (root / "frontend" / "src" / "styles.css").exists()
     assert (root / "frontend" / "src" / "nodeModel.js").exists()
     assert (root / "frontend" / "vendor" / "mind-elixir.js").exists()
@@ -51,3 +53,15 @@ def test_frontend_editor_actions_wired() -> None:
     assert "toggleFold" in js
     assert "zoom(" in js
     assert "centerCanvas" in js
+
+
+def test_share_page_wired() -> None:
+    root = Path(__file__).resolve().parents[1]
+    html = (root / "frontend" / "share.html").read_text(encoding="utf-8")
+    js = (root / "frontend" / "src" / "share.js").read_text(encoding="utf-8")
+    assert "id=\"share-title\"" in html
+    assert "id=\"share-content\"" in html
+    assert "id=\"share-save\"" in html
+    assert "fetchShare" in js
+    assert "saveShare" in js
+    assert "PATCH" in js

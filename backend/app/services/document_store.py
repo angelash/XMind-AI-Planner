@@ -2,6 +2,7 @@
 
 import json
 from pathlib import Path
+import secrets
 import sqlite3
 from typing import Any
 from uuid import uuid4
@@ -103,3 +104,88 @@ def delete_document(document_id: str) -> bool:
     with _connect() as conn:
         result = conn.execute("DELETE FROM documents WHERE id = ?", (document_id,))
     return result.rowcount > 0
+
+
+def _to_share_payload(row: sqlite3.Row) -> dict[str, Any]:
+    return {
+        "token": row["token"],
+        "document_id": row["document_id"],
+        "is_editable": bool(row["is_editable"]),
+        "created_at": row["created_at"],
+        "updated_at": row["updated_at"],
+        "document": {
+            "id": row["doc_id"],
+            "title": row["doc_title"],
+            "content": json.loads(row["doc_content_json"]),
+            "owner_id": row["doc_owner_id"],
+            "created_at": row["doc_created_at"],
+            "updated_at": row["doc_updated_at"],
+        },
+    }
+
+
+def create_or_refresh_share(document_id: str, is_editable: bool = True) -> dict[str, Any] | None:
+    if get_document(document_id) is None:
+        return None
+
+    token = secrets.token_urlsafe(24)
+    with _connect() as conn:
+        conn.execute("DELETE FROM shares WHERE document_id = ?", (document_id,))
+        conn.execute(
+            """
+            INSERT INTO shares(token, document_id, is_editable)
+            VALUES(?, ?, ?)
+            """,
+            (token, document_id, 1 if is_editable else 0),
+        )
+    return get_share(token)
+
+
+def get_share(token: str) -> dict[str, Any] | None:
+    with _connect() as conn:
+        row = conn.execute(
+            """
+            SELECT
+                s.token,
+                s.document_id,
+                s.is_editable,
+                s.created_at,
+                s.updated_at,
+                d.id AS doc_id,
+                d.title AS doc_title,
+                d.content_json AS doc_content_json,
+                d.owner_id AS doc_owner_id,
+                d.created_at AS doc_created_at,
+                d.updated_at AS doc_updated_at
+            FROM shares s
+            JOIN documents d ON d.id = s.document_id
+            WHERE s.token = ?
+            """,
+            (token,),
+        ).fetchone()
+    if row is None:
+        return None
+    return _to_share_payload(row)
+
+
+def update_share_document(token: str, updates: dict[str, Any]) -> dict[str, Any] | None:
+    share = get_share(token)
+    if share is None:
+        return None
+    if not share["is_editable"]:
+        raise PermissionError("share is read only")
+
+    updated = update_document(share["document_id"], updates)
+    if updated is None:
+        return None
+
+    with _connect() as conn:
+        conn.execute(
+            """
+            UPDATE shares
+            SET updated_at = CURRENT_TIMESTAMP
+            WHERE token = ?
+            """,
+            (token,),
+        )
+    return get_share(token)

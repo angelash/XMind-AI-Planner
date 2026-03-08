@@ -52,6 +52,36 @@ main {
   background: #ffffff;
 }
 
+.share-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 960px;
+}
+
+.share-panel input,
+.share-panel textarea {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 14px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.share-panel textarea {
+  resize: vertical;
+  min-height: 360px;
+}
+
+.share-panel button {
+  align-self: flex-start;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
 .fallback {
   margin-top: 12px;
   padding: 12px;

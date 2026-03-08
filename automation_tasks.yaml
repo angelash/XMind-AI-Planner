@@ -128,8 +128,7 @@ tasks:
   title: Markdown 导入
   depends_on:
   - DOC-01
-  status: need_confirm
-  need_confirm_reason: 'push blocked: github.com:443 unreachable (repeated)'
+  status: done
 - id: IMP-02
   milestone: M2
   title: 增量合并导入

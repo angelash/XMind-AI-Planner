@@ -43,6 +43,37 @@ def get_current_user(request: Request) -> dict[str, str]:
 CurrentUser = Annotated[dict[str, str], Depends(get_current_user)]
 
 
+def get_optional_user(request: Request) -> dict[str, str] | None:
+    """Resolve current user; return None if not authenticated."""
+
+    settings = get_settings()
+    token = request.cookies.get(settings.auth_cookie_name)
+    if not token:
+        return None
+
+    payload = decode_jwt(token, settings.auth_jwt_secret)
+    if payload is None:
+        return None
+
+    user_id = payload.get("sub")
+    if not isinstance(user_id, str) or not user_id:
+        return None
+
+    user = get_user_by_id(user_id)
+    if user is None:
+        return None
+
+    return {
+        "id": user["id"],
+        "staff_no": user["staff_no"],
+        "display_name": user["display_name"],
+        "role": user["role"],
+    }
+
+
+OptionalUser = Annotated[dict[str, str] | None, Depends(get_optional_user)]
+
+
 def require_admin(user: CurrentUser) -> dict[str, str]:
     if user.get("role") != "admin":
         raise HTTPException(status_code=403, detail="admin required")
@@ -50,3 +81,13 @@ def require_admin(user: CurrentUser) -> dict[str, str]:
 
 
 AdminUser = Annotated[dict[str, str], Depends(require_admin)]
+
+
+def require_reviewer(user: CurrentUser) -> dict[str, str]:
+    role = user.get("role")
+    if role not in {"reviewer", "admin"}:
+        raise HTTPException(status_code=403, detail="reviewer required")
+    return user
+
+
+ReviewerUser = Annotated[dict[str, str], Depends(require_reviewer)]

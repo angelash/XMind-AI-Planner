@@ -152,7 +152,7 @@ tasks:
   title: 角色权限系统
   depends_on:
   - AUTH-01
-  status: waiting
+  status: done
 - id: AUTH-03
   milestone: M2
   title: 用户管理（admin）

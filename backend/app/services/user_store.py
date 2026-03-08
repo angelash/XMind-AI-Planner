@@ -133,3 +133,13 @@ def ensure_employee_user(staff_no: str) -> dict[str, Any]:
     if created is None:
         raise RuntimeError('created user cannot be loaded')
     return created
+
+
+def set_user_role(staff_no: str, role: str) -> None:
+    """Update user's role. Used by tests and admin tools."""
+
+    with _connect() as conn:
+        conn.execute(
+            "UPDATE users SET role = ?, updated_at = CURRENT_TIMESTAMP WHERE staff_no = ?",
+            (role, staff_no),
+        )

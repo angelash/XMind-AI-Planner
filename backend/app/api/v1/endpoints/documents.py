@@ -31,7 +31,7 @@ class DocumentPatchRequest(BaseModel):
 
 @router.get('')
 def list_document_items(user: CurrentUser) -> dict[str, list[dict[str, Any]]]:
-    items = list_documents(owner_id=None if user['role'] == 'admin' else user['id'])
+    items = list_documents(owner_id=None if user['role'] in {'admin', 'reviewer'} else user['id'])
     return {'items': items}
 
 
@@ -50,7 +50,7 @@ def get_document_item(document_id: str, user: CurrentUser) -> dict[str, Any]:
     if document is None:
         raise HTTPException(status_code=404, detail='document not found')
 
-    if user['role'] != 'admin' and document.get('owner_id') not in (None, user['id']):
+    if user['role'] not in {'admin', 'reviewer'} and document.get('owner_id') not in (None, user['id']):
         # Hide existence from other employees.
         raise HTTPException(status_code=404, detail='document not found')
 
@@ -67,10 +67,10 @@ def patch_document_item(document_id: str, payload: DocumentPatchRequest, user: C
     if document is None:
         raise HTTPException(status_code=404, detail='document not found')
 
-    if user['role'] != 'admin' and document.get('owner_id') not in (None, user['id']):
+    if user['role'] not in {'admin', 'reviewer'} and document.get('owner_id') not in (None, user['id']):
         raise HTTPException(status_code=404, detail='document not found')
 
-    if user['role'] != 'admin' and 'owner_id' in updates and updates['owner_id'] != user['id']:
+    if user['role'] not in {'admin', 'reviewer'} and 'owner_id' in updates and updates['owner_id'] != user['id']:
         raise HTTPException(status_code=403, detail='cannot reassign owner')
 
     updated = update_document(document_id, updates)
@@ -85,7 +85,7 @@ def delete_document_item(document_id: str, user: CurrentUser) -> Response:
     if document is None:
         raise HTTPException(status_code=404, detail='document not found')
 
-    if user['role'] != 'admin' and document.get('owner_id') not in (None, user['id']):
+    if user['role'] not in {'admin', 'reviewer'} and document.get('owner_id') not in (None, user['id']):
         raise HTTPException(status_code=404, detail='document not found')
 
     if not delete_document(document_id):

@@ -1,326 +1,376 @@
-﻿project: XMind-AI-Planner
+project: XMind-AI-Planner
 mode: pure_ai_continuous
 completion_rule: all_tasks_done_and_release_verified
 git_policy:
   commit_push_on_each_task_done: true
-  commit_message_template: "chore(task): complete {task_id}"
+  commit_message_template: 'chore(task): complete {task_id}'
 check:
   interval_minutes: 5
   policy:
-    - if_any_task_in_status_developing_then_wait
-    - if_no_task_in_status_developing_then_start_next_ready_task
+  - if_any_task_in_status_developing_then_wait
+  - if_no_task_in_status_developing_then_start_next_ready_task
 task_status_flow:
-  - waiting
-  - developing
-  - diff_ready
-  - sync_ok
-  - build_ok
-  - done
-  - need_confirm
-  - failed
-  - canceled
+- waiting
+- developing
+- diff_ready
+- sync_ok
+- build_ok
+- done
+- need_confirm
+- failed
+- canceled
 tasks:
-  - id: BOOT-01
-    milestone: M0
-    title: 初始化目录结构
-    depends_on: []
-    status: done
-  - id: BOOT-02
-    milestone: M0
-    title: FastAPI 应用骨架与路由分层
-    depends_on: [BOOT-01]
-    status: done
-  - id: BOOT-03
-    milestone: M0
-    title: 前端骨架与 MindElixir 挂载
-    depends_on: [BOOT-01]
-    status: done
-  - id: BOOT-04
-    milestone: M0
-    title: SQLite 与迁移框架
-    depends_on: [BOOT-02]
-    status: done
-  - id: BOOT-05
-    milestone: M0
-    title: 配置中心与环境变量
-    depends_on: [BOOT-02]
-    status: done
-  - id: BOOT-06
-    milestone: M0
-    title: 日志与全局异常处理
-    depends_on: [BOOT-02]
-    status: done
-  - id: BOOT-07
-    milestone: M0
-    title: CI 流水线
-    depends_on: [BOOT-01]
-    status: done
-  - id: BOOT-08
-    milestone: M0
-    title: 自动化执行器最小闭环
-    depends_on: [BOOT-07]
-    status: done
-  - id: CORE-01
-    milestone: M1
-    title: Node 模型与转换层
-    depends_on: [BOOT-03]
-    status: done
-  - id: CORE-02
-    milestone: M1
-    title: 基础编辑能力
-    depends_on: [CORE-01]
-    status: done
-  - id: CORE-03
-    milestone: M1
-    title: AI 三能力（初始/展开/重写）
-    depends_on: [BOOT-05]
-    status: done
-  - id: CORE-04
-    milestone: M1
-    title: Markdown 导出
-    depends_on: [CORE-01]
-    status: done
-  - id: CORE-05
-    milestone: M1
-    title: Word 导出
-    depends_on: [CORE-04]
-    status: done
-  - id: CORE-06
-    milestone: M1
-    title: 离线资源部署
-    depends_on: [CORE-02]
-    status: done
-  - id: CORE-07
-    milestone: M1
-    title: 核心 E2E 回归
-    depends_on: [CORE-02, CORE-03, CORE-05]
-    status: done
-  - id: DOC-01
-    milestone: M2
-    title: 文档 CRUD
-    depends_on: [BOOT-04]
-    status: done
-  - id: DOC-02
-    milestone: M2
-    title: 分享链接与可编辑分享页
-    depends_on: [DOC-01]
-    status: done
-  - id: IMP-01
-    milestone: M2
-    title: Markdown 导入
-    depends_on: [DOC-01]
-    status: waiting
-  - id: IMP-02
-    milestone: M2
-    title: 增量合并导入
-    depends_on: [IMP-01]
-    status: waiting
-  - id: IMP-03
-    milestone: M2
-    title: 批量目录导入
-    depends_on: [IMP-01]
-    status: waiting
-  - id: AUTH-01
-    milestone: M2
-    title: 工号登录/JWT/Cookie
-    depends_on: [BOOT-04]
-    status: waiting
-  - id: AUTH-02
-    milestone: M2
-    title: 角色权限系统
-    depends_on: [AUTH-01]
-    status: waiting
-  - id: AUTH-03
-    milestone: M2
-    title: 用户管理（admin）
-    depends_on: [AUTH-02]
-    status: waiting
-  - id: WS-01
-    milestone: M2
-    title: 个人工作区入口
-    depends_on: [DOC-01, AUTH-01]
-    status: waiting
-  - id: VER-01
-    milestone: M3
-    title: 版本历史记录
-    depends_on: [DOC-01]
-    status: waiting
-  - id: VER-02
-    milestone: M3
-    title: 版本列表/预览/回滚
-    depends_on: [VER-01]
-    status: waiting
-  - id: PROJ-01
-    milestone: M3
-    title: 项目工作区与成员管理
-    depends_on: [AUTH-02]
-    status: waiting
-  - id: PROJ-02
-    milestone: M3
-    title: 文档跨工作区移动
-    depends_on: [PROJ-01]
-    status: waiting
-  - id: RT-01
-    milestone: M3
-    title: WebSocket 连接管理
-    depends_on: [DOC-01]
-    status: waiting
-  - id: RT-02
-    milestone: M3
-    title: 防抖保存与广播同步
-    depends_on: [RT-01]
-    status: waiting
-  - id: LOCK-01
-    milestone: M3
-    title: 节点锁定机制
-    depends_on: [RT-02]
-    status: waiting
-  - id: REVIEW-01
-    milestone: M3
-    title: 审核流程后端
-    depends_on: [AUTH-02, RT-02]
-    status: waiting
-  - id: REVIEW-02
-    milestone: M3
-    title: 审核面板前端
-    depends_on: [REVIEW-01]
-    status: waiting
-  - id: AG-01
-    milestone: M4
-    title: Agent 面板 UI
-    depends_on: [CORE-02]
-    status: waiting
-  - id: AG-02
-    milestone: M4
-    title: 对话模型与 API
-    depends_on: [AG-01, BOOT-04]
-    status: waiting
-  - id: AG-03
-    milestone: M4
-    title: Diff + Keep/Undo
-    depends_on: [AG-02]
-    status: waiting
-  - id: AG-04
-    milestone: M4
-    title: SSE 流式响应
-    depends_on: [AG-02]
-    status: waiting
-  - id: AG-05
-    milestone: M4
-    title: 节点 ID 上下文约束
-    depends_on: [AG-03]
-    status: waiting
-  - id: AUTO-01
-    milestone: M4
-    title: 自动化任务队列+状态机
-    depends_on: [BOOT-08]
-    status: waiting
-  - id: AUTO-02
-    milestone: M4
-    title: need_confirm 规则引擎
-    depends_on: [AUTO-01]
-    status: waiting
-  - id: AUTO-03
-    milestone: M4
-    title: Artifacts 存储
-    depends_on: [AUTO-01]
-    status: waiting
-  - id: AUTO-04
-    milestone: M4
-    title: 提交工作区与合并包
-    depends_on: [AUTO-03]
-    status: waiting
-  - id: FILE-01
-    milestone: M4
-    title: 文件目录树面板
-    depends_on: [PROJ-01]
-    status: waiting
-  - id: FILE-02
-    milestone: M4
-    title: 文件/文件夹添加为节点
-    depends_on: [FILE-01]
-    status: waiting
-  - id: FILE-03
-    milestone: M4
-    title: MD 文件编辑器
-    depends_on: [FILE-02]
-    status: waiting
-  - id: FILE-04
-    milestone: M4
-    title: 脑图关联操作
-    depends_on: [FILE-02]
-    status: waiting
-  - id: GAP-01
-    milestone: M5
-    title: 撤销/重做+快捷键
-    depends_on: [CORE-02]
-    status: waiting
-  - id: GAP-02
-    milestone: M5
-    title: 节点拖拽排序
-    depends_on: [CORE-02]
-    status: waiting
-  - id: GAP-03
-    milestone: M5
-    title: JSON 手动保存/加载
-    depends_on: [DOC-01]
-    status: waiting
-  - id: GAP-04
-    milestone: M5
-    title: XMind 导出
-    depends_on: [CORE-01]
-    status: waiting
-  - id: GAP-05
-    milestone: M5
-    title: PNG/SVG 导出
-    depends_on: [CORE-02]
-    status: waiting
-  - id: GAP-06
-    milestone: M5
-    title: 云端同步
-    depends_on: [RT-02]
-    status: waiting
-  - id: GAP-07
-    milestone: M5
-    title: OT/CRDT 冲突处理
-    depends_on: [GAP-06]
-    status: waiting
-  - id: GAP-08
-    milestone: M5
-    title: 模板库
-    depends_on: [DOC-01]
-    status: waiting
-  - id: GAP-09
-    milestone: M5
-    title: AI 增强（续写/润色/翻译）
-    depends_on: [CORE-03]
-    status: waiting
-  - id: REL-01
-    milestone: M5
-    title: 全量回归与发布验收
-    depends_on:
-      - CORE-07
-      - WS-01
-      - REVIEW-02
-      - AG-05
-      - AUTO-04
-      - FILE-04
-      - GAP-01
-      - GAP-02
-      - GAP-03
-      - GAP-04
-      - GAP-05
-      - GAP-06
-      - GAP-07
-      - GAP-08
-      - GAP-09
-    status: waiting
-
-
-
-
-
-
-
-
-
+- id: BOOT-01
+  milestone: M0
+  title: 初始化目录结构
+  depends_on: []
+  status: done
+- id: BOOT-02
+  milestone: M0
+  title: FastAPI 应用骨架与路由分层
+  depends_on:
+  - BOOT-01
+  status: done
+- id: BOOT-03
+  milestone: M0
+  title: 前端骨架与 MindElixir 挂载
+  depends_on:
+  - BOOT-01
+  status: done
+- id: BOOT-04
+  milestone: M0
+  title: SQLite 与迁移框架
+  depends_on:
+  - BOOT-02
+  status: done
+- id: BOOT-05
+  milestone: M0
+  title: 配置中心与环境变量
+  depends_on:
+  - BOOT-02
+  status: done
+- id: BOOT-06
+  milestone: M0
+  title: 日志与全局异常处理
+  depends_on:
+  - BOOT-02
+  status: done
+- id: BOOT-07
+  milestone: M0
+  title: CI 流水线
+  depends_on:
+  - BOOT-01
+  status: done
+- id: BOOT-08
+  milestone: M0
+  title: 自动化执行器最小闭环
+  depends_on:
+  - BOOT-07
+  status: done
+- id: CORE-01
+  milestone: M1
+  title: Node 模型与转换层
+  depends_on:
+  - BOOT-03
+  status: done
+- id: CORE-02
+  milestone: M1
+  title: 基础编辑能力
+  depends_on:
+  - CORE-01
+  status: done
+- id: CORE-03
+  milestone: M1
+  title: AI 三能力（初始/展开/重写）
+  depends_on:
+  - BOOT-05
+  status: done
+- id: CORE-04
+  milestone: M1
+  title: Markdown 导出
+  depends_on:
+  - CORE-01
+  status: done
+- id: CORE-05
+  milestone: M1
+  title: Word 导出
+  depends_on:
+  - CORE-04
+  status: done
+- id: CORE-06
+  milestone: M1
+  title: 离线资源部署
+  depends_on:
+  - CORE-02
+  status: done
+- id: CORE-07
+  milestone: M1
+  title: 核心 E2E 回归
+  depends_on:
+  - CORE-02
+  - CORE-03
+  - CORE-05
+  status: done
+- id: DOC-01
+  milestone: M2
+  title: 文档 CRUD
+  depends_on:
+  - BOOT-04
+  status: done
+- id: DOC-02
+  milestone: M2
+  title: 分享链接与可编辑分享页
+  depends_on:
+  - DOC-01
+  status: done
+- id: IMP-01
+  milestone: M2
+  title: Markdown 导入
+  depends_on:
+  - DOC-01
+  status: done
+- id: IMP-02
+  milestone: M2
+  title: 增量合并导入
+  depends_on:
+  - IMP-01
+  status: waiting
+- id: IMP-03
+  milestone: M2
+  title: 批量目录导入
+  depends_on:
+  - IMP-01
+  status: waiting
+- id: AUTH-01
+  milestone: M2
+  title: 工号登录/JWT/Cookie
+  depends_on:
+  - BOOT-04
+  status: waiting
+- id: AUTH-02
+  milestone: M2
+  title: 角色权限系统
+  depends_on:
+  - AUTH-01
+  status: waiting
+- id: AUTH-03
+  milestone: M2
+  title: 用户管理（admin）
+  depends_on:
+  - AUTH-02
+  status: waiting
+- id: WS-01
+  milestone: M2
+  title: 个人工作区入口
+  depends_on:
+  - DOC-01
+  - AUTH-01
+  status: waiting
+- id: VER-01
+  milestone: M3
+  title: 版本历史记录
+  depends_on:
+  - DOC-01
+  status: waiting
+- id: VER-02
+  milestone: M3
+  title: 版本列表/预览/回滚
+  depends_on:
+  - VER-01
+  status: waiting
+- id: PROJ-01
+  milestone: M3
+  title: 项目工作区与成员管理
+  depends_on:
+  - AUTH-02
+  status: waiting
+- id: PROJ-02
+  milestone: M3
+  title: 文档跨工作区移动
+  depends_on:
+  - PROJ-01
+  status: waiting
+- id: RT-01
+  milestone: M3
+  title: WebSocket 连接管理
+  depends_on:
+  - DOC-01
+  status: waiting
+- id: RT-02
+  milestone: M3
+  title: 防抖保存与广播同步
+  depends_on:
+  - RT-01
+  status: waiting
+- id: LOCK-01
+  milestone: M3
+  title: 节点锁定机制
+  depends_on:
+  - RT-02
+  status: waiting
+- id: REVIEW-01
+  milestone: M3
+  title: 审核流程后端
+  depends_on:
+  - AUTH-02
+  - RT-02
+  status: waiting
+- id: REVIEW-02
+  milestone: M3
+  title: 审核面板前端
+  depends_on:
+  - REVIEW-01
+  status: waiting
+- id: AG-01
+  milestone: M4
+  title: Agent 面板 UI
+  depends_on:
+  - CORE-02
+  status: waiting
+- id: AG-02
+  milestone: M4
+  title: 对话模型与 API
+  depends_on:
+  - AG-01
+  - BOOT-04
+  status: waiting
+- id: AG-03
+  milestone: M4
+  title: Diff + Keep/Undo
+  depends_on:
+  - AG-02
+  status: waiting
+- id: AG-04
+  milestone: M4
+  title: SSE 流式响应
+  depends_on:
+  - AG-02
+  status: waiting
+- id: AG-05
+  milestone: M4
+  title: 节点 ID 上下文约束
+  depends_on:
+  - AG-03
+  status: waiting
+- id: AUTO-01
+  milestone: M4
+  title: 自动化任务队列+状态机
+  depends_on:
+  - BOOT-08
+  status: waiting
+- id: AUTO-02
+  milestone: M4
+  title: need_confirm 规则引擎
+  depends_on:
+  - AUTO-01
+  status: waiting
+- id: AUTO-03
+  milestone: M4
+  title: Artifacts 存储
+  depends_on:
+  - AUTO-01
+  status: waiting
+- id: AUTO-04
+  milestone: M4
+  title: 提交工作区与合并包
+  depends_on:
+  - AUTO-03
+  status: waiting
+- id: FILE-01
+  milestone: M4
+  title: 文件目录树面板
+  depends_on:
+  - PROJ-01
+  status: waiting
+- id: FILE-02
+  milestone: M4
+  title: 文件/文件夹添加为节点
+  depends_on:
+  - FILE-01
+  status: waiting
+- id: FILE-03
+  milestone: M4
+  title: MD 文件编辑器
+  depends_on:
+  - FILE-02
+  status: waiting
+- id: FILE-04
+  milestone: M4
+  title: 脑图关联操作
+  depends_on:
+  - FILE-02
+  status: waiting
+- id: GAP-01
+  milestone: M5
+  title: 撤销/重做+快捷键
+  depends_on:
+  - CORE-02
+  status: waiting
+- id: GAP-02
+  milestone: M5
+  title: 节点拖拽排序
+  depends_on:
+  - CORE-02
+  status: waiting
+- id: GAP-03
+  milestone: M5
+  title: JSON 手动保存/加载
+  depends_on:
+  - DOC-01
+  status: waiting
+- id: GAP-04
+  milestone: M5
+  title: XMind 导出
+  depends_on:
+  - CORE-01
+  status: waiting
+- id: GAP-05
+  milestone: M5
+  title: PNG/SVG 导出
+  depends_on:
+  - CORE-02
+  status: waiting
+- id: GAP-06
+  milestone: M5
+  title: 云端同步
+  depends_on:
+  - RT-02
+  status: waiting
+- id: GAP-07
+  milestone: M5
+  title: OT/CRDT 冲突处理
+  depends_on:
+  - GAP-06
+  status: waiting
+- id: GAP-08
+  milestone: M5
+  title: 模板库
+  depends_on:
+  - DOC-01
+  status: waiting
+- id: GAP-09
+  milestone: M5
+  title: AI 增强（续写/润色/翻译）
+  depends_on:
+  - CORE-03
+  status: waiting
+- id: REL-01
+  milestone: M5
+  title: 全量回归与发布验收
+  depends_on:
+  - CORE-07
+  - WS-01
+  - REVIEW-02
+  - AG-05
+  - AUTO-04
+  - FILE-04
+  - GAP-01
+  - GAP-02
+  - GAP-03
+  - GAP-04
+  - GAP-05
+  - GAP-06
+  - GAP-07
+  - GAP-08
+  - GAP-09
+  status: waiting

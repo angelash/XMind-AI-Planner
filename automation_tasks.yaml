@@ -79,7 +79,7 @@ tasks:
     milestone: M1
     title: Markdown 导出
     depends_on: [CORE-01]
-    status: waiting
+    status: done
   - id: CORE-05
     milestone: M1
     title: Word 导出
@@ -314,7 +314,7 @@ tasks:
       - GAP-07
       - GAP-08
       - GAP-09
-    status: done
+    status: waiting
 
 
 

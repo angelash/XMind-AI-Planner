@@ -14,8 +14,14 @@
 ```powershell
 python scripts/automation_watchdog.py --automation-id ai --interval-sec 10 --cooldown-sec 30 --soon-window-sec 10 --log-file AUTOMATION_WATCHDOG.log --pause-flag-file MANUAL_TAKEOVER.flag
 python scripts/task_integrator.py --repo-root F:/workspace/github/XMind-AI-Planner --interval-sec 20 --sync-every-sec 180 --log-file TASK_INTEGRATOR.log
-python scripts/manual_takeover_guard.py --automation-id ai --interval-sec 30 --timeout-min 15 --pending-retry-threshold 2 --log-file MANUAL_TAKEOVER_GUARD.log --queue-file MANUAL_TAKEOVER_QUEUE.jsonl --pause-flag-file MANUAL_TAKEOVER.flag
+python scripts/manual_takeover_guard.py --automation-id ai --interval-sec 30 --timeout-min 15 --pending-retry-threshold 2 --log-file MANUAL_TAKEOVER_GUARD.log --queue-file MANUAL_TAKEOVER_QUEUE.jsonl --pause-flag-file MANUAL_TAKEOVER.flag --feishu-webhook-env FEISHU_WEBHOOK_URL
 ```
+
+飞书通知配置：
+```powershell
+$env:FEISHU_WEBHOOK_URL="https://open.feishu.cn/open-apis/bot/v2/hook/xxxx"
+```
+说明：未配置该环境变量时，守护脚本仅写本地日志，不发送飞书消息。
 
 ## 4. 自动接管触发规则（默认）
 - 规则 A：最新运行为 `IN_PROGRESS` 且持续时间 > 15 分钟
@@ -25,6 +31,7 @@ python scripts/manual_takeover_guard.py --automation-id ai --interval-sec 30 --t
 - 创建 `MANUAL_TAKEOVER.flag`（暂停 watchdog 继续 kick）
 - 记录 `MANUAL_TAKEOVER_QUEUE.jsonl` 待处理项
 - 记录 `MANUAL_TAKEOVER_GUARD.log` 触发原因
+- 若已配置 `FEISHU_WEBHOOK_URL`，自动发送飞书告警消息
 
 ## 5. 人工接管处理步骤
 1. 根据 `MANUAL_TAKEOVER_QUEUE.jsonl` 找到任务 ID 和原因。

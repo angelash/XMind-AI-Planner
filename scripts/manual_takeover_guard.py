@@ -5,11 +5,13 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sqlite3
 import time
 from datetime import datetime
 from pathlib import Path
+from urllib import error, request
 
 
 TASK_RE = re.compile(r"([A-Z]+-\d{2})")
@@ -104,6 +106,31 @@ def write_takeover(
     )
 
 
+def send_feishu_text(webhook_url: str, text: str) -> tuple[bool, str]:
+    payload = {
+        "msg_type": "text",
+        "content": {
+            "text": text,
+        },
+    }
+    data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+    req = request.Request(
+        webhook_url,
+        data=data,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with request.urlopen(req, timeout=10) as resp:
+            body = resp.read().decode("utf-8", errors="ignore")
+            return True, body
+    except error.HTTPError as exc:
+        body = exc.read().decode("utf-8", errors="ignore")
+        return False, f"http_error={exc.code}, body={body}"
+    except Exception as exc:  # noqa: BLE001
+        return False, str(exc)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--db", default="C:/Users/Lenovo/.codex/sqlite/codex-dev.db")
@@ -114,12 +141,18 @@ def main() -> int:
     parser.add_argument("--log-file", default="MANUAL_TAKEOVER_GUARD.log")
     parser.add_argument("--queue-file", default="MANUAL_TAKEOVER_QUEUE.jsonl")
     parser.add_argument("--pause-flag-file", default="MANUAL_TAKEOVER.flag")
+    parser.add_argument(
+        "--feishu-webhook-env",
+        default="FEISHU_WEBHOOK_URL",
+        help="Environment variable name that stores Feishu bot webhook url.",
+    )
     args = parser.parse_args()
 
     db_path = Path(args.db)
     log_file = Path(args.log_file)
     queue_file = Path(args.queue_file)
     pause_flag_file = Path(args.pause_flag_file)
+    feishu_webhook_url = os.getenv(args.feishu_webhook_env, "").strip()
     timeout_ms = args.timeout_min * 60 * 1000
     append_log(
         log_file,
@@ -128,6 +161,14 @@ def main() -> int:
             f"timeout={args.timeout_min}min, retry_threshold={args.pending_retry_threshold}"
         ),
     )
+    if not feishu_webhook_url:
+        append_log(
+            log_file,
+            (
+                f"feishu webhook not configured, set env {args.feishu_webhook_env} "
+                "to enable notifications"
+            ),
+        )
 
     while True:
         try:
@@ -158,6 +199,19 @@ def main() -> int:
                     log_file,
                     f"manual takeover triggered: task={task_id or 'unknown'}, reason={reason}",
                 )
+                if feishu_webhook_url:
+                    text = (
+                        "[XMind-AI-Planner] 触发人工接管\n"
+                        f"任务: {task_id or 'unknown'}\n"
+                        f"原因: {reason}\n"
+                        f"时间: {ts()}\n"
+                        "动作: 已创建 MANUAL_TAKEOVER.flag 并暂停自动触发"
+                    )
+                    ok, result = send_feishu_text(feishu_webhook_url, text)
+                    if ok:
+                        append_log(log_file, "feishu notification sent")
+                    else:
+                        append_log(log_file, f"feishu notification failed: {result}")
         except Exception as exc:  # noqa: BLE001
             append_log(log_file, f"error: {exc}")
         time.sleep(max(args.interval_sec, 5))

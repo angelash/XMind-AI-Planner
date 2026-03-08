@@ -36,15 +36,26 @@ def _to_payload(row: sqlite3.Row) -> dict[str, Any]:
     }
 
 
-def list_documents() -> list[dict[str, Any]]:
+def list_documents(owner_id: str | None = None) -> list[dict[str, Any]]:
     with _connect() as conn:
-        rows = conn.execute(
-            """
-            SELECT id, title, content_json, owner_id, created_at, updated_at
-            FROM documents
-            ORDER BY updated_at DESC, created_at DESC, id DESC
-            """
-        ).fetchall()
+        if owner_id is None:
+            rows = conn.execute(
+                """
+                SELECT id, title, content_json, owner_id, created_at, updated_at
+                FROM documents
+                ORDER BY updated_at DESC, created_at DESC, id DESC
+                """
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                """
+                SELECT id, title, content_json, owner_id, created_at, updated_at
+                FROM documents
+                WHERE owner_id = ?
+                ORDER BY updated_at DESC, created_at DESC, id DESC
+                """,
+                (owner_id,),
+            ).fetchall()
     return [_to_payload(row) for row in rows]
 
 

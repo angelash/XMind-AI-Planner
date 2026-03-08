@@ -15,8 +15,14 @@ def _configure_temp_db(monkeypatch, tmp_path: Path) -> None:
     get_settings.cache_clear()
 
 
+def _login_admin() -> None:
+    resp = client.post('/api/v1/auth/login', json={'staff_no': 'admin', 'password': 'admin-4399'})
+    assert resp.status_code == 200
+
+
 def test_document_crud_flow(monkeypatch, tmp_path: Path) -> None:
     _configure_temp_db(monkeypatch, tmp_path)
+    _login_admin()
 
     create_resp = client.post(
         '/api/v1/documents',
@@ -58,6 +64,7 @@ def test_document_crud_flow(monkeypatch, tmp_path: Path) -> None:
 
 def test_document_patch_requires_payload(monkeypatch, tmp_path: Path) -> None:
     _configure_temp_db(monkeypatch, tmp_path)
+    _login_admin()
 
     create_resp = client.post('/api/v1/documents', json={'title': 'Only title'})
     doc_id = create_resp.json()['id']

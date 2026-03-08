@@ -5,8 +5,10 @@ from typing import Any
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
+from app.api.deps import CurrentUser
 from app.services.document_store import (
     create_or_refresh_share,
+    get_document,
     get_share,
     update_share_document,
 )
@@ -24,7 +26,14 @@ class SharePatchRequest(BaseModel):
 
 
 @router.post('/documents/{document_id}/share')
-def create_document_share(document_id: str, payload: ShareCreateRequest) -> dict[str, Any]:
+def create_document_share(document_id: str, payload: ShareCreateRequest, user: CurrentUser) -> dict[str, Any]:
+    document = get_document(document_id)
+    if document is None:
+        raise HTTPException(status_code=404, detail='document not found')
+
+    if user['role'] != 'admin' and document.get('owner_id') not in (None, user['id']):
+        raise HTTPException(status_code=404, detail='document not found')
+
     share = create_or_refresh_share(document_id, is_editable=payload.is_editable)
     if share is None:
         raise HTTPException(status_code=404, detail='document not found')

@@ -5,6 +5,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
+from app.api.deps import CurrentUser
 from app.services.document_store import create_document, get_document, update_document
 from app.services.markdown_directory_import import (
     MarkdownDirectoryImportFile,
@@ -40,21 +41,29 @@ class MarkdownDirectoryImportRequest(BaseModel):
 
 
 @router.post('/markdown', status_code=status.HTTP_201_CREATED)
-def import_markdown_document(payload: MarkdownImportRequest) -> dict[str, Any]:
+def import_markdown_document(payload: MarkdownImportRequest, user: CurrentUser) -> dict[str, Any]:
     try:
         root = import_markdown(payload.markdown, payload.title)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     document_title = payload.title or str(root.get("text") or "Imported Mindmap")
-    document = create_document(document_title, root, payload.owner_id)
+
+    owner_id = payload.owner_id
+    if user['role'] != 'admin':
+        owner_id = user['id']
+
+    document = create_document(document_title, root, owner_id)
     return {"document": document, "root": root}
 
 
 @router.post('/markdown/merge')
-def merge_markdown_document(payload: MarkdownMergeImportRequest) -> dict[str, Any]:
+def merge_markdown_document(payload: MarkdownMergeImportRequest, user: CurrentUser) -> dict[str, Any]:
     document = get_document(payload.document_id)
     if document is None:
+        raise HTTPException(status_code=404, detail='document not found')
+
+    if user['role'] != 'admin' and document.get('owner_id') not in (None, user['id']):
         raise HTTPException(status_code=404, detail='document not found')
 
     try:
@@ -82,7 +91,7 @@ def merge_markdown_document(payload: MarkdownMergeImportRequest) -> dict[str, An
 
 
 @router.post('/markdown/directory', status_code=status.HTTP_201_CREATED)
-def import_markdown_directory_documents(payload: MarkdownDirectoryImportRequest) -> dict[str, Any]:
+def import_markdown_directory_documents(payload: MarkdownDirectoryImportRequest, user: CurrentUser) -> dict[str, Any]:
     files = [
         MarkdownDirectoryImportFile(
             path=item.path,
@@ -92,8 +101,12 @@ def import_markdown_directory_documents(payload: MarkdownDirectoryImportRequest)
         for item in payload.files
     ]
 
+    owner_id = payload.owner_id
+    if user['role'] != 'admin':
+        owner_id = user['id']
+
     try:
-        results, stats = import_markdown_directory(files, payload.owner_id)
+        results, stats = import_markdown_directory(files, owner_id)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

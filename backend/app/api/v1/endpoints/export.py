@@ -6,6 +6,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
+from app.api.deps import CurrentUser
 from app.services.markdown_export import render_markdown
 from app.services.word_export import render_docx
 
@@ -17,7 +18,7 @@ class MarkdownExportRequest(BaseModel):
 
 
 @router.post('/markdown')
-def export_markdown(payload: MarkdownExportRequest) -> dict[str, str]:
+def export_markdown(payload: MarkdownExportRequest, _user: CurrentUser) -> dict[str, str]:
     try:
         markdown = render_markdown(payload.root)
     except ValueError as exc:
@@ -26,7 +27,7 @@ def export_markdown(payload: MarkdownExportRequest) -> dict[str, str]:
 
 
 @router.post('/word')
-def export_word(payload: MarkdownExportRequest) -> dict[str, str]:
+def export_word(payload: MarkdownExportRequest, _user: CurrentUser) -> dict[str, str]:
     try:
         docx_bytes = render_docx(payload.root)
     except ValueError as exc:

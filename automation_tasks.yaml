@@ -314,7 +314,7 @@ tasks:
       - GAP-07
       - GAP-08
       - GAP-09
-    status: waiting
+    status: done
 
 
 

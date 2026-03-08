@@ -135,9 +135,77 @@ def ensure_employee_user(staff_no: str) -> dict[str, Any]:
     return created
 
 
+def _validate_role(role: str) -> str:
+    role = role.strip()
+    if role not in {"employee", "reviewer", "admin"}:
+        raise ValueError("invalid role")
+    return role
+
+
+def list_users() -> list[dict[str, Any]]:
+    with _connect() as conn:
+        rows = conn.execute(
+            "SELECT id, staff_no, display_name, role, created_at, updated_at FROM users ORDER BY staff_no"
+        ).fetchall()
+    return [_to_payload(row) for row in rows]
+
+
+def create_user(staff_no: str, display_name: str, role: str = "employee") -> dict[str, Any]:
+    staff_no = staff_no.strip()
+    display_name = display_name.strip()
+    if not staff_no:
+        raise ValueError("staff_no is required")
+    if not display_name:
+        raise ValueError("display_name is required")
+    role = _validate_role(role)
+
+    user_id = str(uuid4())
+    with _connect() as conn:
+        conn.execute(
+            "INSERT INTO users(id, staff_no, display_name, role) VALUES(?, ?, ?, ?)",
+            (user_id, staff_no, display_name, role),
+        )
+
+    created = get_user_by_id(user_id)
+    if created is None:
+        raise RuntimeError("created user cannot be loaded")
+    return created
+
+
+def update_user(staff_no: str, updates: dict[str, Any]) -> dict[str, Any] | None:
+    current = get_user_by_staff_no(staff_no)
+    if current is None:
+        return None
+
+    display_name = updates.get("display_name", current["display_name"])
+    role = updates.get("role", current["role"])
+
+    if display_name is None or not str(display_name).strip():
+        raise ValueError("display_name is required")
+
+    if role is None:
+        role = current["role"]
+    role = _validate_role(str(role))
+
+    with _connect() as conn:
+        conn.execute(
+            "UPDATE users SET display_name = ?, role = ?, updated_at = CURRENT_TIMESTAMP WHERE staff_no = ?",
+            (str(display_name).strip(), role, staff_no),
+        )
+
+    return get_user_by_staff_no(staff_no)
+
+
+def delete_user(staff_no: str) -> bool:
+    with _connect() as conn:
+        result = conn.execute("DELETE FROM users WHERE staff_no = ?", (staff_no,))
+    return result.rowcount > 0
+
+
 def set_user_role(staff_no: str, role: str) -> None:
     """Update user's role. Used by tests and admin tools."""
 
+    role = _validate_role(role)
     with _connect() as conn:
         conn.execute(
             "UPDATE users SET role = ?, updated_at = CURRENT_TIMESTAMP WHERE staff_no = ?",

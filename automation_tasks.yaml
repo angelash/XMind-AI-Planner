@@ -158,7 +158,7 @@ tasks:
   title: 用户管理（admin）
   depends_on:
   - AUTH-02
-  status: waiting
+  status: done
 - id: WS-01
   milestone: M2
   title: 个人工作区入口

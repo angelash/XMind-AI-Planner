@@ -1,4 +1,4 @@
-﻿project: XMind-AI-Planner
+project: XMind-AI-Planner
 mode: pure_ai_continuous
 completion_rule: all_tasks_done_and_release_verified
 git_policy:
@@ -22,90 +22,90 @@ task_status_flow:
 tasks:
 - id: BOOT-01
   milestone: M0
-  title: 鍒濆鍖栫洰褰曠粨鏋?
+  title: 初始化目录结构
   depends_on: []
   status: done
 - id: BOOT-02
   milestone: M0
-  title: FastAPI 搴旂敤楠ㄦ灦涓庤矾鐢卞垎灞?
+  title: FastAPI 应用骨架与路由分层
   depends_on:
   - BOOT-01
   status: done
 - id: BOOT-03
   milestone: M0
-  title: 鍓嶇楠ㄦ灦涓?MindElixir 鎸傝浇
+  title: 前端骨架与 MindElixir 挂载
   depends_on:
   - BOOT-01
   status: done
 - id: BOOT-04
   milestone: M0
-  title: SQLite 涓庤縼绉绘鏋?
+  title: SQLite 与迁移框架
   depends_on:
   - BOOT-02
   status: done
 - id: BOOT-05
   milestone: M0
-  title: 閰嶇疆涓績涓庣幆澧冨彉閲?
+  title: 配置中心与环境变量
   depends_on:
   - BOOT-02
   status: done
 - id: BOOT-06
   milestone: M0
-  title: 鏃ュ織涓庡叏灞€寮傚父澶勭悊
+  title: 日志与全局异常处理
   depends_on:
   - BOOT-02
   status: done
 - id: BOOT-07
   milestone: M0
-  title: CI 娴佹按绾?
+  title: CI 流水线
   depends_on:
   - BOOT-01
   status: done
 - id: BOOT-08
   milestone: M0
-  title: 鑷姩鍖栨墽琛屽櫒鏈€灏忛棴鐜?
+  title: 自动化执行器最小闭环
   depends_on:
   - BOOT-07
   status: done
 - id: CORE-01
   milestone: M1
-  title: Node 妯″瀷涓庤浆鎹㈠眰
+  title: Node 模型与转换层
   depends_on:
   - BOOT-03
   status: done
 - id: CORE-02
   milestone: M1
-  title: 鍩虹缂栬緫鑳藉姏
+  title: 基础编辑能力
   depends_on:
   - CORE-01
   status: done
 - id: CORE-03
   milestone: M1
-  title: AI 涓夎兘鍔涳紙鍒濆/灞曞紑/閲嶅啓锛?
+  title: AI 三能力（初始/展开/重写）
   depends_on:
   - BOOT-05
   status: done
 - id: CORE-04
   milestone: M1
-  title: Markdown 瀵煎嚭
+  title: Markdown 导出
   depends_on:
   - CORE-01
   status: done
 - id: CORE-05
   milestone: M1
-  title: Word 瀵煎嚭
+  title: Word 导出
   depends_on:
   - CORE-04
   status: done
 - id: CORE-06
   milestone: M1
-  title: 绂荤嚎璧勬簮閮ㄧ讲
+  title: 离线资源部署
   depends_on:
   - CORE-02
   status: done
 - id: CORE-07
   milestone: M1
-  title: 鏍稿績 E2E 鍥炲綊
+  title: 核心 E2E 回归
   depends_on:
   - CORE-02
   - CORE-03
@@ -113,123 +113,123 @@ tasks:
   status: done
 - id: DOC-01
   milestone: M2
-  title: 鏂囨。 CRUD
+  title: 文档 CRUD
   depends_on:
   - BOOT-04
   status: done
 - id: DOC-02
   milestone: M2
-  title: 鍒嗕韩閾炬帴涓庡彲缂栬緫鍒嗕韩椤?
+  title: 分享链接与可编辑分享页
   depends_on:
   - DOC-01
   status: done
 - id: IMP-01
   milestone: M2
-  title: Markdown 瀵煎叆
+  title: Markdown 导入
   depends_on:
   - DOC-01
   status: done
 - id: IMP-02
   milestone: M2
-  title: 澧為噺鍚堝苟瀵煎叆
+  title: 增量合并导入
   depends_on:
   - IMP-01
   status: done
 - id: IMP-03
   milestone: M2
-  title: 鎵归噺鐩綍瀵煎叆
+  title: 批量目录导入
   depends_on:
   - IMP-01
   status: done
 - id: AUTH-01
   milestone: M2
-  title: 宸ュ彿鐧诲綍/JWT/Cookie
+  title: 工号登录/JWT/Cookie
   depends_on:
   - BOOT-04
   status: done
 - id: AUTH-02
   milestone: M2
-  title: 瑙掕壊鏉冮檺绯荤粺
+  title: 角色权限系统
   depends_on:
   - AUTH-01
   status: waiting
 - id: AUTH-03
   milestone: M2
-  title: 鐢ㄦ埛绠＄悊锛坅dmin锛?
+  title: 用户管理（admin）
   depends_on:
   - AUTH-02
   status: waiting
 - id: WS-01
   milestone: M2
-  title: 涓汉宸ヤ綔鍖哄叆鍙?
+  title: 个人工作区入口
   depends_on:
   - DOC-01
   - AUTH-01
   status: waiting
 - id: VER-01
   milestone: M3
-  title: 鐗堟湰鍘嗗彶璁板綍
+  title: 版本历史记录
   depends_on:
   - DOC-01
   status: waiting
 - id: VER-02
   milestone: M3
-  title: 鐗堟湰鍒楄〃/棰勮/鍥炴粴
+  title: 版本列表/预览/回滚
   depends_on:
   - VER-01
   status: waiting
 - id: PROJ-01
   milestone: M3
-  title: 椤圭洰宸ヤ綔鍖轰笌鎴愬憳绠＄悊
+  title: 项目工作区与成员管理
   depends_on:
   - AUTH-02
   status: waiting
 - id: PROJ-02
   milestone: M3
-  title: 鏂囨。璺ㄥ伐浣滃尯绉诲姩
+  title: 文档跨工作区移动
   depends_on:
   - PROJ-01
   status: waiting
 - id: RT-01
   milestone: M3
-  title: WebSocket 杩炴帴绠＄悊
+  title: WebSocket 连接管理
   depends_on:
   - DOC-01
   status: waiting
 - id: RT-02
   milestone: M3
-  title: 闃叉姈淇濆瓨涓庡箍鎾悓姝?
+  title: 防抖保存与广播同步
   depends_on:
   - RT-01
   status: waiting
 - id: LOCK-01
   milestone: M3
-  title: 鑺傜偣閿佸畾鏈哄埗
+  title: 节点锁定机制
   depends_on:
   - RT-02
   status: waiting
 - id: REVIEW-01
   milestone: M3
-  title: 瀹℃牳娴佺▼鍚庣
+  title: 审核流程后端
   depends_on:
   - AUTH-02
   - RT-02
   status: waiting
 - id: REVIEW-02
   milestone: M3
-  title: 瀹℃牳闈㈡澘鍓嶇
+  title: 审核面板前端
   depends_on:
   - REVIEW-01
   status: waiting
 - id: AG-01
   milestone: M4
-  title: Agent 闈㈡澘 UI
+  title: Agent 面板 UI
   depends_on:
   - CORE-02
   status: waiting
 - id: AG-02
   milestone: M4
-  title: 瀵硅瘽妯″瀷涓?API
+  title: 对话模型与 API
   depends_on:
   - AG-01
   - BOOT-04
@@ -242,25 +242,25 @@ tasks:
   status: waiting
 - id: AG-04
   milestone: M4
-  title: SSE 娴佸紡鍝嶅簲
+  title: SSE 流式响应
   depends_on:
   - AG-02
   status: waiting
 - id: AG-05
   milestone: M4
-  title: 鑺傜偣 ID 涓婁笅鏂囩害鏉?
+  title: 节点 ID 上下文约束
   depends_on:
   - AG-03
   status: waiting
 - id: AUTO-01
   milestone: M4
-  title: 鑷姩鍖栦换鍔￠槦鍒?鐘舵€佹満
+  title: 自动化任务队列状态机
   depends_on:
   - BOOT-08
   status: waiting
 - id: AUTO-02
   milestone: M4
-  title: need_confirm 瑙勫垯寮曟搸
+  title: need_confirm 规则引擎
   depends_on:
   - AUTO-01
   status: waiting
@@ -272,19 +272,19 @@ tasks:
   status: waiting
 - id: AUTO-04
   milestone: M4
-  title: 鎻愪氦宸ヤ綔鍖轰笌鍚堝苟鍖?
+  title: 提交工作区与合并区
   depends_on:
   - AUTO-03
   status: waiting
 - id: FILE-01
   milestone: M4
-  title: 鏂囦欢鐩綍鏍戦潰鏉?
+  title: 文件目录树面板
   depends_on:
   - PROJ-01
   status: waiting
 - id: FILE-02
   milestone: M4
-  title: 鏂囦欢/鏂囦欢澶规坊鍔犱负鑺傜偣
+  title: 文件/文件夹添加为节点
   depends_on:
   - FILE-01
   status: waiting
@@ -308,31 +308,31 @@ tasks:
   status: waiting
 - id: GAP-02
   milestone: M5
-  title: 鑺傜偣鎷栨嫿鎺掑簭
+  title: 节点拖拽排序
   depends_on:
   - CORE-02
   status: waiting
 - id: GAP-03
   milestone: M5
-  title: JSON 鎵嬪姩淇濆瓨/鍔犺浇
+  title: JSON 手动保存/加载
   depends_on:
   - DOC-01
   status: waiting
 - id: GAP-04
   milestone: M5
-  title: XMind 瀵煎嚭
+  title: XMind 导出
   depends_on:
   - CORE-01
   status: waiting
 - id: GAP-05
   milestone: M5
-  title: PNG/SVG 瀵煎嚭
+  title: PNG/SVG 导出
   depends_on:
   - CORE-02
   status: waiting
 - id: GAP-06
   milestone: M5
-  title: 浜戠鍚屾
+  title: 云端同步
   depends_on:
   - RT-02
   status: waiting
@@ -356,7 +356,7 @@ tasks:
   status: waiting
 - id: REL-01
   milestone: M5
-  title: 鍏ㄩ噺鍥炲綊涓庡彂甯冮獙鏀?
+  title: 全量回归与发布验收
   depends_on:
   - CORE-07
   - WS-01
@@ -374,8 +374,3 @@ tasks:
   - GAP-08
   - GAP-09
   status: waiting
-
-
-
-
-

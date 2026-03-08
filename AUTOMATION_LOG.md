@@ -14,3 +14,10 @@
 - result: no conflicts during integration
 - task adjustment: IMP-01 set from need_confirm to done to unblock downstream tasks in commit-only mode
 - note: all changes are prepared locally on main; waiting for one final manual push
+## 2026-03-08 18:44:06 +08:00
+- cycle: fast
+- picked task: IMP-02 (ready, dependencies done)
+- implemented: added incremental markdown merge import service + /api/v1/import/markdown/merge endpoint, merged into existing document by text-matched branches with recursive node insertion
+- validation: python -m pytest -q tests/backend/test_markdown_import.py tests/backend/test_markdown_merge_import.py tests/backend/test_import_routes.py => 9 passed; python scripts/build_check.py => 47 passed + build_check_passed
+- task status path: developing -> diff_ready -> sync_ok -> build_ok -> done
+- next git action: commit and push once to main with message chore(task): complete IMP-02`n

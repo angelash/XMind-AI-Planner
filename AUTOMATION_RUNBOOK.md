@@ -46,3 +46,14 @@ $env:FEISHU_WEBHOOK_URL="https://open.feishu.cn/open-apis/bot/v2/hook/xxxx"
 - `TASK_INTEGRATOR.log`
 - `MANUAL_TAKEOVER_GUARD.log`
 - `MANUAL_TAKEOVER_QUEUE.jsonl`
+
+## 7. Commit-only mode (manual push)
+- Default policy: automation commits only and does not auto-push.
+- `automation_tasks.yaml`: `git_policy.commit_push_on_each_task_done: false`.
+- If you want integrator to push automatically, start it with `--push`; otherwise keep default off.
+
+Recommended commands (manual push workflow):
+```powershell
+python scripts/task_executor.py --tasks-file automation_tasks.yaml --git-commit
+python scripts/task_integrator.py --repo-root F:/workspace/github/XMind-AI-Planner --interval-sec 20 --sync-every-sec 180 --log-file TASK_INTEGRATOR.log
+```

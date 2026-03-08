@@ -45,3 +45,8 @@ def test_cycle_advances_first_ready(tmp_path: Path) -> None:
     status_map = {task["id"]: task["status"] for task in data["tasks"]}
     assert status_map["B"] == "done"
     assert status_map["C"] == "waiting"
+
+
+def test_git_policy_commit_only_default() -> None:
+    data = yaml.safe_load(Path("automation_tasks.yaml").read_text(encoding="utf-8"))
+    assert data["git_policy"]["commit_push_on_each_task_done"] is False

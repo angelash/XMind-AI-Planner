@@ -8,6 +8,7 @@ scheduler can start the next run immediately.
 from __future__ import annotations
 
 import argparse
+import re
 import sqlite3
 import time
 from datetime import datetime
@@ -28,6 +29,30 @@ def append_log(log_file: Path, message: str) -> None:
         f.write(f"[{ts()}] {message}\n")
 
 
+def parse_pause_flag_task_id(pause_flag_file: Path) -> str | None:
+    if not pause_flag_file.exists():
+        return None
+    for line in pause_flag_file.read_text(encoding="utf-8").splitlines():
+        if line.startswith("task_id="):
+            value = line.split("=", 1)[1].strip()
+            return value if value and value != "unknown" else None
+    return None
+
+
+def task_status_from_yaml(tasks_file: Path, task_id: str) -> str | None:
+    if not tasks_file.exists():
+        return None
+    text = tasks_file.read_text(encoding="utf-8")
+    block = re.search(
+        rf"(?ms)^-\s+id:\s*{re.escape(task_id)}\s*\n(.*?)(?=^\s*-\s+id:|\Z)",
+        text,
+    )
+    if not block:
+        return None
+    match = re.search(r"(?m)^\s*status:\s*([^\n#]+)", block.group(1))
+    return match.group(1).strip() if match else None
+
+
 def maybe_kick(
     db_path: Path,
     automation_id: str,
@@ -35,8 +60,19 @@ def maybe_kick(
     soon_window_ms: int,
     log_file: Path,
     pause_flag_file: Path,
+    tasks_file: Path,
 ) -> None:
     if pause_flag_file.exists():
+        task_id = parse_pause_flag_task_id(pause_flag_file)
+        if task_id:
+            status = task_status_from_yaml(tasks_file, task_id)
+            if status == "done":
+                pause_flag_file.unlink(missing_ok=True)
+                append_log(
+                    log_file,
+                    f"auto-cleared stale pause flag for done task: {task_id}",
+                )
+                return
         append_log(
             log_file,
             f"pause flag exists, skip kick: {pause_flag_file}",
@@ -123,6 +159,11 @@ def main() -> int:
         default="MANUAL_TAKEOVER.flag",
         help="If this file exists, watchdog will not kick automation.",
     )
+    parser.add_argument(
+        "--tasks-file",
+        default="automation_tasks.yaml",
+        help="Task ledger file used to auto-clear stale pause flags.",
+    )
     args = parser.parse_args()
 
     db_path = Path(args.db)
@@ -130,6 +171,7 @@ def main() -> int:
     cooldown_ms = args.cooldown_sec * 1000
     soon_window_ms = args.soon_window_sec * 1000
     pause_flag_file = Path(args.pause_flag_file)
+    tasks_file = Path(args.tasks_file)
 
     append_log(
         log_file,
@@ -148,6 +190,7 @@ def main() -> int:
                 soon_window_ms=soon_window_ms,
                 log_file=log_file,
                 pause_flag_file=pause_flag_file,
+                tasks_file=tasks_file,
             )
         except Exception as exc:  # noqa: BLE001
             append_log(log_file, f"error: {exc}")

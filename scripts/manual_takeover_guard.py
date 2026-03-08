@@ -113,6 +113,53 @@ def write_takeover(
     )
 
 
+def parse_pause_flag_task_id(pause_flag_file: Path) -> str | None:
+    if not pause_flag_file.exists():
+        return None
+    for line in pause_flag_file.read_text(encoding="utf-8").splitlines():
+        if line.startswith("task_id="):
+            value = line.split("=", 1)[1].strip()
+            return value if value and value != "unknown" else None
+    return None
+
+
+def task_status_from_yaml(tasks_file: Path, task_id: str) -> str | None:
+    if not tasks_file.exists():
+        return None
+    text = tasks_file.read_text(encoding="utf-8")
+    block = re.search(
+        rf"(?ms)^-\s+id:\s*{re.escape(task_id)}\s*\n(.*?)(?=^\s*-\s+id:|\Z)",
+        text,
+    )
+    if not block:
+        return None
+    match = re.search(r"(?m)^\s*status:\s*([^\n#]+)", block.group(1))
+    return match.group(1).strip() if match else None
+
+
+def close_open_queue_entries(queue_file: Path, task_id: str, note: str) -> int:
+    if not queue_file.exists():
+        return 0
+    updated = 0
+    lines = queue_file.read_text(encoding="utf-8").splitlines()
+    out: list[str] = []
+    for line in lines:
+        if not line.strip():
+            continue
+        try:
+            item = json.loads(line)
+        except json.JSONDecodeError:
+            out.append(line)
+            continue
+        if item.get("task_id") == task_id and item.get("status") == "open":
+            item["status"] = "closed"
+            item["closed_note"] = note
+            updated += 1
+        out.append(json.dumps(item, ensure_ascii=False))
+    queue_file.write_text(("\n".join(out) + "\n") if out else "", encoding="utf-8")
+    return updated
+
+
 def send_feishu_text(webhook_url: str, text: str) -> tuple[bool, str]:
     payload = {
         "msg_type": "text",
@@ -148,6 +195,7 @@ def main() -> int:
     parser.add_argument("--log-file", default="MANUAL_TAKEOVER_GUARD.log")
     parser.add_argument("--queue-file", default="MANUAL_TAKEOVER_QUEUE.jsonl")
     parser.add_argument("--pause-flag-file", default="MANUAL_TAKEOVER.flag")
+    parser.add_argument("--tasks-file", default="automation_tasks.yaml")
     parser.add_argument(
         "--feishu-webhook-env",
         default="FEISHU_WEBHOOK_URL",
@@ -159,6 +207,7 @@ def main() -> int:
     log_file = Path(args.log_file)
     queue_file = Path(args.queue_file)
     pause_flag_file = Path(args.pause_flag_file)
+    tasks_file = Path(args.tasks_file)
     feishu_webhook_url = os.getenv(args.feishu_webhook_env, "").strip()
     timeout_ms = args.timeout_min * 60 * 1000
     append_log(
@@ -180,6 +229,21 @@ def main() -> int:
     while True:
         try:
             if pause_flag_file.exists():
+                paused_task_id = parse_pause_flag_task_id(pause_flag_file)
+                if paused_task_id:
+                    status = task_status_from_yaml(tasks_file, paused_task_id)
+                    if status == "done":
+                        note = "auto-closed because task already done in automation_tasks.yaml"
+                        closed = close_open_queue_entries(queue_file, paused_task_id, note)
+                        pause_flag_file.unlink(missing_ok=True)
+                        append_log(
+                            log_file,
+                            (
+                                f"auto-cleared stale pause flag for {paused_task_id}; "
+                                f"closed_queue_items={closed}"
+                            ),
+                        )
+                        continue
                 time.sleep(max(args.interval_sec, 5))
                 continue
 
@@ -196,6 +260,15 @@ def main() -> int:
                 conn.close()
 
             if hit:
+                if task_id:
+                    status = task_status_from_yaml(tasks_file, task_id)
+                    if status == "done":
+                        append_log(
+                            log_file,
+                            f"skip takeover for {task_id}: already done in tasks file",
+                        )
+                        time.sleep(max(args.interval_sec, 5))
+                        continue
                 write_takeover(
                     queue_file=queue_file,
                     pause_flag_file=pause_flag_file,

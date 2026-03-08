@@ -57,3 +57,9 @@ Recommended commands (manual push workflow):
 python scripts/task_executor.py --tasks-file automation_tasks.yaml --git-commit
 python scripts/task_integrator.py --repo-root F:/workspace/github/XMind-AI-Planner --interval-sec 20 --sync-every-sec 180 --log-file TASK_INTEGRATOR.log
 ```
+
+## 8. Anti-loop guardrails
+- `task_integrator.py` now defaults to push mode (`push=on`). Use `--no-push` only for debugging.
+- `automation_watchdog.py` can auto-clear stale `MANUAL_TAKEOVER.flag` when the flagged task is already `done`.
+- `manual_takeover_guard.py` can auto-close stale open queue items when the flagged task is already `done`.
+- Always pass absolute paths for `--pause-flag-file`, `--queue-file`, and `--log-file` in long-running processes.

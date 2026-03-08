@@ -1,8 +1,8 @@
 ﻿#!/usr/bin/env python3
 """Auto-integrate task commits from Codex worktrees into main.
 
-By default this script cherry-picks into the main repo only (no push).
-Use `--push` to push to origin/main after each successful integration.
+By default this script cherry-picks and pushes to origin/main.
+Use `--no-push` to keep local-only integration.
 """
 
 from __future__ import annotations
@@ -149,7 +149,19 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--interval-sec", type=int, default=20)
     parser.add_argument("--sync-every-sec", type=int, default=300)
     parser.add_argument("--log-file", default="TASK_INTEGRATOR.log")
-    parser.add_argument("--push", action="store_true", help="Push origin/main after each integration")
+    parser.add_argument(
+        "--push",
+        dest="push",
+        action="store_true",
+        default=True,
+        help="Push origin/main after each integration (default: on)",
+    )
+    parser.add_argument(
+        "--no-push",
+        dest="push",
+        action="store_false",
+        help="Disable pushing; integrate into local main only.",
+    )
     return parser.parse_args()
 
 

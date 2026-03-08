@@ -89,7 +89,7 @@ tasks:
     milestone: M1
     title: 离线资源部署
     depends_on: [CORE-02]
-    status: waiting
+    status: done
   - id: CORE-07
     milestone: M1
     title: 核心 E2E 回归
@@ -315,6 +315,11 @@ tasks:
       - GAP-08
       - GAP-09
     status: waiting
+
+
+
+
+
 
 
 

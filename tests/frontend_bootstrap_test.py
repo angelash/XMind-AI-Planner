@@ -7,6 +7,7 @@ def test_frontend_bootstrap_files_exist() -> None:
     assert (root / "frontend" / "src" / "main.js").exists()
     assert (root / "frontend" / "src" / "styles.css").exists()
     assert (root / "frontend" / "src" / "nodeModel.js").exists()
+    assert (root / "frontend" / "vendor" / "mind-elixir.js").exists()
 
 
 def test_frontend_contains_mindmap_mount() -> None:
@@ -16,6 +17,13 @@ def test_frontend_contains_mindmap_mount() -> None:
     assert 'id="mindmap"' in html
     assert "MindElixir" in js
     assert "toMindElixirDocument" in js
+
+
+def test_frontend_uses_local_mindelixir_asset() -> None:
+    root = Path(__file__).resolve().parents[1]
+    html = (root / "frontend" / "index.html").read_text(encoding="utf-8")
+    assert "./vendor/mind-elixir.js" in html
+    assert "unpkg.com" not in html
 
 
 def test_frontend_toolbar_controls_exist() -> None:

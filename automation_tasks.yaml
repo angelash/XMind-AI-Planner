@@ -146,7 +146,7 @@ tasks:
   title: 宸ュ彿鐧诲綍/JWT/Cookie
   depends_on:
   - BOOT-04
-  status: waiting
+  status: done
 - id: AUTH-02
   milestone: M2
   title: 瑙掕壊鏉冮檺绯荤粺

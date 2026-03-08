@@ -15,7 +15,10 @@ class Settings:
     db_path: str = "data/xmind_ai_planner.db"
     openai_base_url: str = "https://api.openai.com/v1"
     openai_api_key: str = ""
-
+    auth_jwt_secret: str = "dev-secret-change-me"
+    auth_jwt_exp_minutes: int = 480
+    auth_cookie_name: str = "xmind_ai_session"
+    admin_password: str = "admin-4399"
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -27,6 +30,12 @@ class Settings:
             db_path=os.getenv("DB_PATH", cls.db_path),
             openai_base_url=os.getenv("OPENAI_BASE_URL", cls.openai_base_url),
             openai_api_key=os.getenv("OPENAI_API_KEY", cls.openai_api_key),
+            auth_jwt_secret=os.getenv("AUTH_JWT_SECRET", cls.auth_jwt_secret),
+            auth_jwt_exp_minutes=int(
+                os.getenv("AUTH_JWT_EXP_MINUTES", str(cls.auth_jwt_exp_minutes))
+            ),
+            auth_cookie_name=os.getenv("AUTH_COOKIE_NAME", cls.auth_cookie_name),
+            admin_password=os.getenv("ADMIN_PASSWORD", cls.admin_password),
         )
 
     @property

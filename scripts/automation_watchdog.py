@@ -34,7 +34,15 @@ def maybe_kick(
     cooldown_ms: int,
     soon_window_ms: int,
     log_file: Path,
+    pause_flag_file: Path,
 ) -> None:
+    if pause_flag_file.exists():
+        append_log(
+            log_file,
+            f"pause flag exists, skip kick: {pause_flag_file}",
+        )
+        return
+
     conn = sqlite3.connect(str(db_path))
     try:
         cur = conn.cursor()
@@ -110,12 +118,18 @@ def main() -> int:
         default="AUTOMATION_WATCHDOG.log",
         help="Log file path.",
     )
+    parser.add_argument(
+        "--pause-flag-file",
+        default="MANUAL_TAKEOVER.flag",
+        help="If this file exists, watchdog will not kick automation.",
+    )
     args = parser.parse_args()
 
     db_path = Path(args.db)
     log_file = Path(args.log_file)
     cooldown_ms = args.cooldown_sec * 1000
     soon_window_ms = args.soon_window_sec * 1000
+    pause_flag_file = Path(args.pause_flag_file)
 
     append_log(
         log_file,
@@ -133,6 +147,7 @@ def main() -> int:
                 cooldown_ms=cooldown_ms,
                 soon_window_ms=soon_window_ms,
                 log_file=log_file,
+                pause_flag_file=pause_flag_file,
             )
         except Exception as exc:  # noqa: BLE001
             append_log(log_file, f"error: {exc}")

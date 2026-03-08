@@ -1,32 +1,41 @@
-# 自动化运行说明（连续执行直到完成）
+# 自动化运行手册（连续执行 + 15 分钟超时自动接管）
 
-## 1. 目标
+## 1. 真相源
+- 代码真相源：`origin/main`
+- 任务真相源：`automation_tasks.yaml`
+- 原则：以主干和任务台账为准，禁止重复执行已 `done` 任务。
 
-对 `automation_tasks.yaml` 中的任务持续调度，直到全部任务为 `done`，且 `REL-01` 完成。
+## 2. 常驻进程
+- `automation_watchdog.py`：持续触发下一轮自动化
+- `task_integrator.py`：把 worktree 任务提交集成到 `main` 并推送
+- `manual_takeover_guard.py`：超时自动触发人工接管
 
-## 2. 调度规则
+## 3. 启动命令
+```powershell
+python scripts/automation_watchdog.py --automation-id ai --interval-sec 10 --cooldown-sec 30 --soon-window-sec 10 --log-file AUTOMATION_WATCHDOG.log --pause-flag-file MANUAL_TAKEOVER.flag
+python scripts/task_integrator.py --repo-root F:/workspace/github/XMind-AI-Planner --interval-sec 20 --sync-every-sec 180 --log-file TASK_INTEGRATOR.log
+python scripts/manual_takeover_guard.py --automation-id ai --interval-sec 30 --timeout-min 15 --pending-retry-threshold 2 --log-file MANUAL_TAKEOVER_GUARD.log --queue-file MANUAL_TAKEOVER_QUEUE.jsonl --pause-flag-file MANUAL_TAKEOVER.flag
+```
 
-1. 每次轮询先检查是否存在 `developing` 任务。
-2. 若存在 `developing`：本轮不启动新任务，直接等待下一轮。
-3. 若不存在 `developing`：选择第一个依赖已满足且状态为 `waiting` 的任务，推进到 `done`。
-4. 任务状态推进顺序：`developing -> diff_ready -> sync_ok -> build_ok -> done`。
-5. 失败任务标记为 `failed`，重试后仍失败则转 `need_confirm`。
-6. 每完成一个任务，必须立即执行一次 `git commit` 和 `git push`。
-7. 所有任务完成并通过 `REL-01` 后停止调度。
+## 4. 自动接管触发规则（默认）
+- 规则 A：最新运行为 `IN_PROGRESS` 且持续时间 > 15 分钟
+- 规则 B：最近运行中出现 `PENDING_REVIEW` 且标题含 `push blocked`/`network blocked`，累计 >= 2 次
 
-补充执行机制：
+命中任一规则后：
+- 创建 `MANUAL_TAKEOVER.flag`（暂停 watchdog 继续 kick）
+- 记录 `MANUAL_TAKEOVER_QUEUE.jsonl` 待处理项
+- 记录 `MANUAL_TAKEOVER_GUARD.log` 触发原因
 
-- 自动化在 worktree 内完成任务提交。
-- `scripts/task_integrator.py` 负责将这些任务提交自动集成到主工作区并推送 `main`。
-- 若自动化侧 push 受限，集成器会继续保证“一任务一提交一推送”在主干落地。
+## 5. 人工接管处理步骤
+1. 根据 `MANUAL_TAKEOVER_QUEUE.jsonl` 找到任务 ID 和原因。
+2. 从对应 worktree 抽取 `chore(task): complete TASK-ID` 提交，`cherry-pick` 到 `main`。
+3. 跑任务最小测试集，确认通过后 `git push origin main`。
+4. 更新 `automation_tasks.yaml` 为正确状态（`done`），修正任何误标。
+5. 全量同步 worktree 到 `origin/main`。
+6. 删除 `MANUAL_TAKEOVER.flag`，恢复 watchdog 自动触发。
 
-## 3. 轮询与节奏
-
-- 轮询周期：5 分钟（若使用 watchdog，则无空窗接力）。
-- 不区分白天/夜晚，持续执行。
-
-## 4. 人工确认触发点
-
-1. 连续失败或不可恢复异常。
-2. 高风险操作（大规模覆盖或删除）。
-3. 依赖冲突导致无法自动推进。
+## 6. 观测文件
+- `AUTOMATION_WATCHDOG.log`
+- `TASK_INTEGRATOR.log`
+- `MANUAL_TAKEOVER_GUARD.log`
+- `MANUAL_TAKEOVER_QUEUE.jsonl`

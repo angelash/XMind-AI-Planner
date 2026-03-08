@@ -60,22 +60,29 @@ def should_trigger(
     task_id = extract_task_id(title)
     age_ms = now_ms() - int(created_at or 0)
 
-    if status == "IN_PROGRESS" and age_ms >= timeout_ms:
-        reason = f"in_progress timeout: {age_ms // 60000} min"
-        return True, task_id, reason
+    # If task is actively running and still within timeout, do not evaluate
+    # historical PENDING_REVIEW records.
+    if status == "IN_PROGRESS":
+        if age_ms >= timeout_ms:
+            reason = f"in_progress timeout: {age_ms // 60000} min"
+            return True, task_id, reason
+        return False, None, "healthy in_progress"
 
+    # Count only consecutive latest blocked reviews of the same task.
     blocked_count = 0
     blocked_task: str | None = None
-    for row in runs:
-        s, _c, _u, t = row
+    for s, _c, _u, t in runs:
         if s != "PENDING_REVIEW":
-            continue
+            break
         title_text = (t or "").lower()
         if "push blocked" not in title_text and "network blocked" not in title_text:
-            continue
-        blocked_count += 1
+            break
+        current_task = extract_task_id(t)
         if blocked_task is None:
-            blocked_task = extract_task_id(t)
+            blocked_task = current_task
+        elif current_task != blocked_task:
+            break
+        blocked_count += 1
         if blocked_count >= pending_retry_threshold:
             reason = f"pending_review blocked retries: {blocked_count}"
             return True, blocked_task, reason

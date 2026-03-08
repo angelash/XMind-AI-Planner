@@ -96,7 +96,7 @@ def sync_worktrees_to_main(repo_root: Path, worktrees: list[Path], log_path: Pat
                 "remote",
                 "set-url",
                 "origin",
-                "https://github.com/angelash/XMind-AI-Planner.git",
+                "git@github.com:angelash/XMind-AI-Planner.git",
             ],
             check=False,
         )

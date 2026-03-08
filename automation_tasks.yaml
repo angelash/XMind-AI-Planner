@@ -94,7 +94,7 @@ tasks:
     milestone: M1
     title: 核心 E2E 回归
     depends_on: [CORE-02, CORE-03, CORE-05]
-    status: waiting
+    status: done
   - id: DOC-01
     milestone: M2
     title: 文档 CRUD

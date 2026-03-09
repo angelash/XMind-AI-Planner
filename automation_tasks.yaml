@@ -281,7 +281,7 @@ tasks:
   title: 文件目录树面板
   depends_on:
   - PROJ-01
-  status: waiting
+  status: done
 - id: FILE-02
   milestone: M4
   title: 文件/文件夹添加为节点

@@ -1,6 +1,7 @@
 ﻿from fastapi import APIRouter
 
 from app.api.v1.endpoints.ai import router as ai_router
+from app.api.v1.endpoints.artifacts import router as artifacts_router
 from app.api.v1.endpoints.auth import router as auth_router
 from app.api.v1.endpoints.conversations import router as conversations_router
 from app.api.v1.endpoints.dev_tasks import router as dev_tasks_router
@@ -30,3 +31,4 @@ router.include_router(review_router, prefix='/review', tags=['review'])
 router.include_router(websocket_router, tags=['websocket'])
 router.include_router(conversations_router, prefix='/conversations', tags=['conversations'])
 router.include_router(dev_tasks_router, prefix='/dev-tasks', tags=['dev-tasks'])
+router.include_router(artifacts_router, prefix='/artifacts', tags=['artifacts'])

@@ -269,7 +269,7 @@ tasks:
   title: Artifacts 瀛樺偍
   depends_on:
   - AUTO-01
-  status: waiting
+  status: developing
 - id: AUTO-04
   milestone: M4
   title: 提交工作区与合并区

@@ -130,3 +130,61 @@ def test_agent_input_is_multiline() -> None:
     
     assert "<textarea" in html
     assert 'id="agent-input"' in html
+
+
+def test_agent_panel_diff_card_styles() -> None:
+    """Agent panel should have Diff card styles for AI suggestions."""
+    root = Path(__file__).resolve().parents[1]
+    css = (root / "frontend" / "src" / "styles.css").read_text(encoding="utf-8")
+    
+    # Diff card structure
+    assert ".agent-diff-card" in css
+    assert ".agent-diff-header" in css
+    assert ".agent-diff-content" in css
+    
+    # Diff line styles
+    assert ".agent-diff-line-deleted" in css
+    assert ".agent-diff-line-added" in css
+
+
+def test_agent_panel_step_indicator_styles() -> None:
+    """Agent panel should have step indicator styles for streaming progress."""
+    root = Path(__file__).resolve().parents[1]
+    css = (root / "frontend" / "src" / "styles.css").read_text(encoding="utf-8")
+    
+    # Step indicator
+    assert ".agent-step-indicator" in css
+    
+    # Spinner animation
+    assert "@keyframes spin" in css or "spinner" in css
+
+
+def test_agent_panel_streaming_cursor() -> None:
+    """Agent panel should have streaming cursor animation."""
+    root = Path(__file__).resolve().parents[1]
+    css = (root / "frontend" / "src" / "styles.css").read_text(encoding="utf-8")
+    
+    # Streaming cursor
+    assert ".agent-streaming-cursor" in css
+    
+    # Blink animation
+    assert "@keyframes blink" in css
+
+
+def test_agent_panel_integrates_with_mindelixir_selection() -> None:
+    """Agent panel should be integrated with MindElixir node selection."""
+    root = Path(__file__).resolve().parents[1]
+    main_js = (root / "frontend" / "src" / "main.js").read_text(encoding="utf-8")
+    
+    # Should import agent panel functions
+    assert "setContextNode" in main_js
+    assert "clearContextNode" in main_js
+
+
+def test_agent_panel_operation_bar_initially_hidden() -> None:
+    """Agent operation bar should be initially hidden when no pending changes."""
+    root = Path(__file__).resolve().parents[1]
+    html = (root / "frontend" / "index.html").read_text(encoding="utf-8")
+    
+    # Operation bar should have hidden class initially
+    assert 'class="agent-operation-bar hidden"' in html

@@ -1,4 +1,5 @@
 import { toMindElixirDocument } from "./nodeModel.js";
+import { setContextNode, clearContextNode } from "./agent.js";
 
 const mount = document.getElementById("mindmap");
 const fallback = document.getElementById("fallback");
@@ -68,6 +69,12 @@ function installSelectionListener() {
   mind.bus.addListener("selectNode", (node) => {
     selectedNode = node || null;
     refreshNodeLabel();
+    // Update agent panel context
+    if (node && node.id && node.topic) {
+      setContextNode(node.id, node.topic);
+    } else {
+      clearContextNode();
+    }
   });
 }
 

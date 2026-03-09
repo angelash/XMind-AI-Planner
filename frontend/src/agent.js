@@ -352,6 +352,153 @@ function keepAllChanges() {
 }
 
 /**
+ * Add a Diff card to the message stream
+ * @param {Object} diff - Diff object with type, nodeId, nodeText, oldContent, newContent
+ */
+export function addDiffCard(diff) {
+  if (!messagesEl) return;
+
+  const { type, nodeId, nodeText, oldContent, newContent, id } = diff;
+  
+  const cardEl = document.createElement("div");
+  cardEl.className = "agent-diff-card";
+  if (id) {
+    cardEl.dataset.diffId = id;
+  }
+
+  // Header
+  const headerEl = document.createElement("div");
+  headerEl.className = "agent-diff-header";
+  
+  const typeEl = document.createElement("span");
+  typeEl.className = "agent-diff-type";
+  typeEl.textContent = type || "update";
+  
+  const nodeEl = document.createElement("span");
+  nodeEl.className = "agent-diff-node";
+  nodeEl.textContent = nodeText || nodeId || "";
+  
+  const actionsEl = document.createElement("div");
+  actionsEl.className = "agent-diff-actions";
+  
+  const keepBtn = document.createElement("button");
+  keepBtn.type = "button";
+  keepBtn.textContent = "Keep";
+  keepBtn.addEventListener("click", () => handleDiffAction(id, "keep"));
+  
+  const undoBtn = document.createElement("button");
+  undoBtn.type = "button";
+  undoBtn.textContent = "Undo";
+  undoBtn.addEventListener("click", () => handleDiffAction(id, "undo"));
+  
+  actionsEl.appendChild(keepBtn);
+  actionsEl.appendChild(undoBtn);
+  
+  headerEl.appendChild(typeEl);
+  headerEl.appendChild(nodeEl);
+  headerEl.appendChild(actionsEl);
+  
+  // Content
+  const contentEl = document.createElement("div");
+  contentEl.className = "agent-diff-content";
+  
+  if (oldContent) {
+    const oldLine = document.createElement("div");
+    oldLine.className = "agent-diff-line agent-diff-line-deleted";
+    oldLine.textContent = `- ${oldContent}`;
+    contentEl.appendChild(oldLine);
+  }
+  
+  if (newContent) {
+    const newLine = document.createElement("div");
+    newLine.className = "agent-diff-line agent-diff-line-added";
+    newLine.textContent = `+ ${newContent}`;
+    contentEl.appendChild(newLine);
+  }
+  
+  cardEl.appendChild(headerEl);
+  cardEl.appendChild(contentEl);
+  
+  // Make header clickable to toggle collapse
+  headerEl.addEventListener("click", (e) => {
+    if (e.target.tagName === "BUTTON") return;
+    contentEl.classList.toggle("hidden");
+  });
+  
+  messagesEl.appendChild(cardEl);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+  
+  return cardEl;
+}
+
+/**
+ * Handle Diff card action (keep/undo)
+ */
+function handleDiffAction(diffId, action) {
+  console.log(`Diff ${diffId}: ${action}`);
+  // TODO: Implement actual diff action handling
+  // Remove the card from UI for now
+  const cardEl = document.querySelector(`[data-diff-id="${diffId}"]`);
+  if (cardEl) {
+    cardEl.remove();
+  }
+  updatePendingCount(Math.max(0, pendingChanges.length - 1));
+}
+
+/**
+ * Add a step indicator to the message stream
+ * @param {string} text - Step text
+ * @returns {Object} - Element and remove function
+ */
+export function addStepIndicator(text) {
+  if (!messagesEl) return null;
+
+  const stepEl = document.createElement("div");
+  stepEl.className = "agent-step-indicator";
+  
+  const spinnerEl = document.createElement("div");
+  spinnerEl.className = "spinner";
+  
+  const textEl = document.createElement("span");
+  textEl.className = "step-text";
+  textEl.textContent = text;
+  
+  stepEl.appendChild(spinnerEl);
+  stepEl.appendChild(textEl);
+  
+  messagesEl.appendChild(stepEl);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+  
+  return {
+    element: stepEl,
+    remove: () => stepEl.remove(),
+    updateText: (newText) => { textEl.textContent = newText; }
+  };
+}
+
+/**
+ * Add a streaming cursor to an AI message
+ * @param {HTMLElement} messageEl - Message element to add cursor to
+ * @returns {Object} - Cursor element and remove function
+ */
+export function addStreamingCursor(messageEl) {
+  if (!messageEl) return null;
+
+  const cursorEl = document.createElement("span");
+  cursorEl.className = "agent-streaming-cursor";
+  
+  const contentEl = messageEl.querySelector(".agent-message-content");
+  if (contentEl) {
+    contentEl.appendChild(cursorEl);
+  }
+  
+  return {
+    element: cursorEl,
+    remove: () => cursorEl.remove()
+  };
+}
+
+/**
  * Escape HTML to prevent XSS
  */
 function escapeHtml(str) {

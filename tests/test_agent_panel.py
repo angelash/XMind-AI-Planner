@@ -188,3 +188,38 @@ def test_agent_panel_operation_bar_initially_hidden() -> None:
     
     # Operation bar should have hidden class initially
     assert 'class="agent-operation-bar hidden"' in html
+
+
+def test_agent_panel_has_diff_card_function() -> None:
+    """Agent panel should have addDiffCard function."""
+    root = Path(__file__).resolve().parents[1]
+    agent_js = (root / "frontend" / "src" / "agent.js").read_text(encoding="utf-8")
+    
+    assert "addDiffCard" in agent_js
+    assert "handleDiffAction" in agent_js
+
+
+def test_agent_panel_has_step_indicator_function() -> None:
+    """Agent panel should have addStepIndicator function for streaming."""
+    root = Path(__file__).resolve().parents[1]
+    agent_js = (root / "frontend" / "src" / "agent.js").read_text(encoding="utf-8")
+    
+    assert "addStepIndicator" in agent_js
+
+
+def test_agent_panel_has_streaming_cursor_function() -> None:
+    """Agent panel should have addStreamingCursor function."""
+    root = Path(__file__).resolve().parents[1]
+    agent_js = (root / "frontend" / "src" / "agent.js").read_text(encoding="utf-8")
+    
+    assert "addStreamingCursor" in agent_js
+
+
+def test_agent_panel_persists_state() -> None:
+    """Agent panel should persist state to localStorage."""
+    root = Path(__file__).resolve().parents[1]
+    agent_js = (root / "frontend" / "src" / "agent.js").read_text(encoding="utf-8")
+    
+    assert "localStorage" in agent_js
+    assert "savePersistedState" in agent_js
+    assert "loadPersistedState" in agent_js

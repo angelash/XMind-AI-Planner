@@ -98,3 +98,34 @@ def test_admin_workspace_shows_own_documents(monkeypatch, tmp_path: Path) -> Non
         # Admin's workspace shows only their own documents
         assert ws_data['stats']['total_documents'] == 1
         assert ws_data['documents'][0]['title'] == 'Admin Doc'
+
+
+def test_workspace_excludes_project_documents(monkeypatch, tmp_path: Path) -> None:
+    """Personal workspace should not include documents moved to projects."""
+    _configure_env(monkeypatch, tmp_path)
+
+    with TestClient(app) as client:
+        # Login as user
+        client.post('/api/v1/auth/login', json={'staff_no': 'e4001'})
+
+        # Create personal document
+        personal_doc = client.post('/api/v1/documents', json={'title': 'Personal Doc'})
+        assert personal_doc.status_code == 201
+
+        # Create project and document in project
+        proj_resp = client.post('/api/v1/projects', json={'name': 'My Project'})
+        project_id = proj_resp.json()['id']
+
+        project_doc = client.post('/api/v1/documents', json={
+            'title': 'Project Doc',
+            'project_id': project_id,
+        })
+        assert project_doc.status_code == 201
+
+        # Get workspace - should only show personal document
+        ws_resp = client.get('/api/v1/workspace')
+        assert ws_resp.status_code == 200
+        ws_data = ws_resp.json()
+
+        assert ws_data['stats']['total_documents'] == 1
+        assert ws_data['documents'][0]['title'] == 'Personal Doc'

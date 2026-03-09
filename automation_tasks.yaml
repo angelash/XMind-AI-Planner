@@ -263,7 +263,7 @@ tasks:
   title: need_confirm 规则引擎
   depends_on:
   - AUTO-01
-  status: waiting
+  status: developing
 - id: AUTO-03
   milestone: M4
   title: Artifacts 瀛樺偍

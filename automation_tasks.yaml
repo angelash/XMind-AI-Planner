@@ -305,64 +305,63 @@ tasks:
   title: 鎾ら攢/閲嶅仛+蹇嵎閿?
   depends_on:
   - CORE-02
-  status: developing
-  status: developing
+  status: done
 - id: GAP-02
   milestone: M5
   title: 节点拖拽排序
   depends_on:
   - CORE-02
-  status: developing
-  status: developing
+  status: done
+  status: done
 - id: GAP-03
   milestone: M5
   title: JSON 手动保存/加载
   depends_on:
   - DOC-01
-  status: developing
-  status: developing
+  status: done
+  status: done
 - id: GAP-04
   milestone: M5
   title: XMind 导出
   depends_on:
   - CORE-01
-  status: developing
-  status: developing
+  status: done
+  status: done
 - id: GAP-05
   milestone: M5
   title: PNG/SVG 导出
   depends_on:
   - CORE-02
-  status: developing
-  status: developing
+  status: done
+  status: done
 - id: GAP-06
   milestone: M5
   title: 云端同步
   depends_on:
   - RT-02
-  status: developing
-  status: developing
+  status: done
+  status: done
 - id: GAP-07
   milestone: M5
   title: OT/CRDT 鍐茬獊澶勭悊
   depends_on:
   - GAP-06
-  status: developing
-  status: developing
+  status: done
+  status: done
 - id: GAP-08
   milestone: M5
   title: 妯℃澘搴?
   depends_on:
   - DOC-01
-  status: developing
-  status: developing
+  status: done
+  status: done
 - id: GAP-09
   milestone: M5
   title: AI 澧炲己锛堢画鍐?娑﹁壊/缈昏瘧锛?
   depends_on:
   - CORE-03
-  status: developing
-  status: developing
+  status: done
+  status: done
 - id: REL-01
   milestone: M5
   title: 全量回归与发布验收
@@ -382,5 +381,5 @@ tasks:
   - GAP-07
   - GAP-08
   - GAP-09
-  status: developing
-  status: developing
+  status: done
+  status: done

@@ -8,6 +8,7 @@ from app.api.v1.endpoints.conversations import router as conversations_router
 from app.api.v1.endpoints.dev_tasks import router as dev_tasks_router
 from app.api.v1.endpoints.documents import router as documents_router
 from app.api.v1.endpoints.export import router as export_router
+from app.api.v1.endpoints.file_tree import router as file_tree_router
 from app.api.v1.endpoints.imports import router as imports_router
 from app.api.v1.endpoints.projects import router as projects_router
 from app.api.v1.endpoints.review import router as review_router
@@ -34,3 +35,4 @@ router.include_router(conversations_router, prefix='/conversations', tags=['conv
 router.include_router(dev_tasks_router, prefix='/dev-tasks', tags=['dev-tasks'])
 router.include_router(artifacts_router, prefix='/artifacts', tags=['artifacts'])
 router.include_router(commit_workspace_router, prefix='/commit-workspace', tags=['commit-workspace'])
+router.include_router(file_tree_router, prefix='/projects', tags=['file-tree'])

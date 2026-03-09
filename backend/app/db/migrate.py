@@ -26,6 +26,9 @@ def run_migrations(db_path: Path, migrations_dir: Path) -> list[str]:
 
     applied_now: list[str] = []
     with sqlite3.connect(db_path) as conn:
+        # Enable foreign key support for CASCADE operations
+        conn.execute("PRAGMA foreign_keys = ON")
+        
         _ensure_meta_table(conn)
         already_applied = _applied_versions(conn)
 

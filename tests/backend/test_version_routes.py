@@ -33,7 +33,10 @@ def test_list_versions_empty(monkeypatch, tmp_path: Path) -> None:
 
 
 def test_version_workflow(monkeypatch, tmp_path: Path) -> None:
-    """Test version creation, listing, and rollback."""
+    """Test version creation, listing, and rollback.
+
+    With auto-versioning, update_document automatically creates versions.
+    """
     _configure_env(monkeypatch, tmp_path)
 
     with TestClient(app) as client:
@@ -47,13 +50,12 @@ def test_version_workflow(monkeypatch, tmp_path: Path) -> None:
         })
         doc_id = doc_resp.json()['id']
 
-        # Manually create a version (simulating save)
-        from app.services.document_store import create_document_version, update_document
-        create_document_version(doc_id, 'Version Test', {'id': 'root', 'text': 'v1'}, user_id, 'Initial version')
+        # Update document (auto-creates version 1)
+        from app.services.document_store import update_document
+        update_document(doc_id, {'title': 'Version Test v1', 'content': {'id': 'root', 'text': 'v1'}}, changed_by=user_id)
 
-        # Update document
-        update_document(doc_id, {'title': 'Version Test v2', 'content': {'id': 'root', 'text': 'v2'}})
-        create_document_version(doc_id, 'Version Test v2', {'id': 'root', 'text': 'v2'}, user_id, 'Updated to v2')
+        # Update document again (auto-creates version 2)
+        update_document(doc_id, {'title': 'Version Test v2', 'content': {'id': 'root', 'text': 'v2'}}, changed_by=user_id)
 
         # List versions
         versions_resp = client.get(f'/api/v1/documents/{doc_id}/versions')

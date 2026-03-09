@@ -171,7 +171,7 @@ tasks:
   title: 版本历史记录
   depends_on:
   - DOC-01
-  status: waiting
+  status: done
 - id: VER-02
   milestone: M3
   title: 版本列表/预览/回滚

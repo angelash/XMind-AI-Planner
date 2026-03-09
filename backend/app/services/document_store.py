@@ -90,15 +90,8 @@ def create_document(title: str, content: dict[str, Any], owner_id: str | None) -
     return document
 
 
-def update_document(document_id: str, updates: dict[str, Any]) -> dict[str, Any] | None:
-    current = get_document(document_id)
-    if current is None:
-        return None
-
-    title = updates.get("title", current["title"])
-    content = updates.get("content", current["content"])
-    owner_id = updates.get("owner_id", current["owner_id"])
-
+def _update_document_internal(document_id: str, title: str, content: dict[str, Any], owner_id: str | None) -> dict[str, Any] | None:
+    """Internal function to update document without creating version."""
     with _connect() as conn:
         conn.execute(
             """
@@ -109,6 +102,26 @@ def update_document(document_id: str, updates: dict[str, Any]) -> dict[str, Any]
             (title, json.dumps(content, ensure_ascii=False), owner_id, document_id),
         )
     return get_document(document_id)
+
+
+def update_document(document_id: str, updates: dict[str, Any], changed_by: str | None = None) -> dict[str, Any] | None:
+    """Update a document and automatically create a version history entry."""
+    current = get_document(document_id)
+    if current is None:
+        return None
+
+    title = updates.get("title", current["title"])
+    content = updates.get("content", current["content"])
+    owner_id = updates.get("owner_id", current["owner_id"])
+
+    updated = _update_document_internal(document_id, title, content, owner_id)
+    if updated is None:
+        return None
+
+    # Create version history entry
+    create_document_version(document_id, title, content, changed_by)
+
+    return updated
 
 
 def delete_document(document_id: str) -> bool:
@@ -324,8 +337,8 @@ def rollback_to_version(document_id: str, version_id: str, changed_by: str | Non
         "Auto-saved before rollback",
     )
 
-    # Update document to the version content
-    updated = update_document(document_id, {"title": version["title"], "content": version["content"]})
+    # Update document to the version content (without creating version)
+    updated = _update_document_internal(document_id, version["title"], version["content"], current["owner_id"])
     if updated is None:
         return None
 

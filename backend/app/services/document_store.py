@@ -200,3 +200,142 @@ def update_share_document(token: str, updates: dict[str, Any]) -> dict[str, Any]
             (token,),
         )
     return get_share(token)
+
+
+# Version history functions
+
+MAX_VERSIONS_PER_DOCUMENT = 50
+
+
+def _to_version_payload(row: sqlite3.Row) -> dict[str, Any]:
+    return {
+        "id": row["id"],
+        "document_id": row["document_id"],
+        "version_number": row["version_number"],
+        "title": row["title"],
+        "content": json.loads(row["content_json"]),
+        "changed_by": row["changed_by"],
+        "summary": row["summary"],
+        "created_at": row["created_at"],
+    }
+
+
+def list_document_versions(document_id: str) -> list[dict[str, Any]]:
+    """List all versions for a document, newest first."""
+    with _connect() as conn:
+        rows = conn.execute(
+            """
+            SELECT id, document_id, version_number, title, content_json, changed_by, summary, created_at
+            FROM document_versions
+            WHERE document_id = ?
+            ORDER BY version_number DESC
+            """,
+            (document_id,),
+        ).fetchall()
+    return [_to_version_payload(row) for row in rows]
+
+
+def get_document_version(document_id: str, version_id: str) -> dict[str, Any] | None:
+    """Get a specific version of a document."""
+    with _connect() as conn:
+        row = conn.execute(
+            """
+            SELECT id, document_id, version_number, title, content_json, changed_by, summary, created_at
+            FROM document_versions
+            WHERE id = ? AND document_id = ?
+            """,
+            (version_id, document_id),
+        ).fetchone()
+    if row is None:
+        return None
+    return _to_version_payload(row)
+
+
+def create_document_version(
+    document_id: str,
+    title: str,
+    content: dict[str, Any],
+    changed_by: str | None = None,
+    summary: str | None = None,
+) -> dict[str, Any]:
+    """Create a new version for a document.
+
+    Automatically assigns version_number and cleans up old versions.
+    """
+    with _connect() as conn:
+        # Get next version number
+        row = conn.execute(
+            """
+            SELECT COALESCE(MAX(version_number), 0) + 1 AS next_version
+            FROM document_versions
+            WHERE document_id = ?
+            """,
+            (document_id,),
+        ).fetchone()
+        next_version = row["next_version"] if row else 1
+
+        version_id = str(uuid4())
+        conn.execute(
+            """
+            INSERT INTO document_versions(id, document_id, version_number, title, content_json, changed_by, summary)
+            VALUES(?, ?, ?, ?, ?, ?, ?)
+            """,
+            (version_id, document_id, next_version, title, json.dumps(content, ensure_ascii=False), changed_by, summary),
+        )
+
+        # Clean up old versions if exceeding limit
+        conn.execute(
+            """
+            DELETE FROM document_versions
+            WHERE document_id = ? AND version_number <= (
+                SELECT MAX(version_number) - ? FROM document_versions WHERE document_id = ?
+            )
+            """,
+            (document_id, MAX_VERSIONS_PER_DOCUMENT, document_id),
+        )
+
+    version = get_document_version(document_id, version_id)
+    if version is None:
+        raise RuntimeError("created version cannot be loaded")
+    return version
+
+
+def rollback_to_version(document_id: str, version_id: str, changed_by: str | None = None) -> dict[str, Any] | None:
+    """Rollback document to a specific version.
+
+    Creates a new version with the old content before applying.
+    """
+    # Get the version to rollback to
+    version = get_document_version(document_id, version_id)
+    if version is None:
+        return None
+
+    # Get current document state
+    current = get_document(document_id)
+    if current is None:
+        return None
+
+    # Create a version of current state before rollback
+    create_document_version(
+        document_id,
+        current["title"],
+        current["content"],
+        changed_by,
+        "Auto-saved before rollback",
+    )
+
+    # Update document to the version content
+    updated = update_document(document_id, {"title": version["title"], "content": version["content"]})
+    if updated is None:
+        return None
+
+    # Create a version for the rollback
+    create_document_version(
+        document_id,
+        version["title"],
+        version["content"],
+        changed_by,
+        f"Rolled back to version {version['version_number']}",
+    )
+
+    return updated

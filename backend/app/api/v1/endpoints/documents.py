@@ -13,6 +13,7 @@ from app.services.document_store import (
     list_documents,
     update_document,
 )
+from app.api.v1.endpoints.versions import router as versions_router
 
 router = APIRouter()
 
@@ -97,3 +98,7 @@ def delete_document_item(document_id: str, user: CurrentUser) -> Response:
     if not delete_document(document_id):
         raise HTTPException(status_code=404, detail='document not found')
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# Mount versions under /{document_id}/versions
+router.include_router(versions_router, prefix='/{document_id}/versions', tags=['versions'])

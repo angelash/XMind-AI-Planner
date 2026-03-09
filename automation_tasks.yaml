@@ -239,7 +239,7 @@ tasks:
   title: Diff + Keep/Undo
   depends_on:
   - AG-02
-  status: waiting
+  status: done
 - id: AG-04
   milestone: M4
   title: SSE 流式响应

@@ -2,16 +2,19 @@
 
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Response, status
+from fastapi import APIRouter, HTTPException, Query, Response, status
 from pydantic import BaseModel, Field
 
 from app.api.deps import CurrentUser
 from app.services.document_store import (
+    bind_link,
     create_document,
     delete_document,
+    export_subtree_as_document,
     get_document,
     list_documents,
     move_document_to_project,
+    recall_association,
     update_document,
 )
 from app.api.v1.endpoints.versions import router as versions_router
@@ -37,9 +40,32 @@ class DocumentMoveRequest(BaseModel):
     project_id: str | None = None
 
 
+class ExportSubtreeRequest(BaseModel):
+    node_id: str = Field(min_length=1)
+    clear_original_children: bool = False
+
+
+class RecallAssociationRequest(BaseModel):
+    node_id: str = Field(min_length=1)
+
+
+class BindLinkRequest(BaseModel):
+    node_id: str = Field(min_length=1)
+    linked_doc_id: str = Field(min_length=1)
+
+
 @router.get('')
-def list_document_items(user: CurrentUser) -> dict[str, list[dict[str, Any]]]:
-    items = list_documents(owner_id=None if user['role'] in {'admin', 'reviewer'} else user['id'])
+def list_document_items(
+    user: CurrentUser,
+    project_id: str | None = Query(default=None, description="Filter by project ID"),
+) -> dict[str, list[dict[str, Any]]]:
+    """List documents, optionally filtered by project."""
+    if project_id is not None:
+        # List project documents
+        items = list_documents(project_id=project_id)
+    else:
+        # List all accessible documents
+        items = list_documents(owner_id=None if user['role'] in {'admin', 'reviewer'} else user['id'])
     return {'items': items}
 
 
@@ -150,6 +176,89 @@ def move_document(document_id: str, payload: DocumentMoveRequest, user: CurrentU
     if updated is None:
         raise HTTPException(status_code=404, detail='document not found')
     return updated
+
+
+@router.post('/{document_id}/export-subtree', status_code=status.HTTP_201_CREATED)
+def export_subtree(document_id: str, payload: ExportSubtreeRequest, user: CurrentUser) -> dict[str, Any]:
+    """Export a node subtree as a new document and link it to the original node."""
+    document = get_document(document_id)
+    if document is None:
+        raise HTTPException(status_code=404, detail='document not found')
+
+    # Check access
+    is_admin = user['role'] in {'admin', 'reviewer'}
+    is_owner = document.get('owner_id') == user['id']
+    if not is_admin and not is_owner:
+        raise HTTPException(status_code=404, detail='document not found')
+
+    result = export_subtree_as_document(
+        document_id,
+        payload.node_id,
+        payload.clear_original_children,
+        user['id'],
+    )
+    if result is None:
+        raise HTTPException(status_code=404, detail='node not found')
+    return result
+
+
+@router.post('/{document_id}/recall-association')
+def recall_node_association(document_id: str, payload: RecallAssociationRequest, user: CurrentUser) -> dict[str, Any]:
+    """Recall (merge) an associated mind map back into the node."""
+    document = get_document(document_id)
+    if document is None:
+        raise HTTPException(status_code=404, detail='document not found')
+
+    # Check access
+    is_admin = user['role'] in {'admin', 'reviewer'}
+    is_owner = document.get('owner_id') == user['id']
+    if not is_admin and not is_owner:
+        raise HTTPException(status_code=404, detail='document not found')
+
+    result = recall_association(document_id, payload.node_id, user['id'])
+    if result is None:
+        # Check if the node exists but has no linked document
+        content = document.get('content', {})
+        node_data = content.get('nodeData', {})
+        
+        def find_node(node, node_id):
+            if node.get('id') == node_id:
+                return node
+            for child in node.get('children', []):
+                found = find_node(child, node_id)
+                if found:
+                    return found
+            return None
+        
+        target_node = find_node(node_data, payload.node_id)
+        if target_node and not target_node.get('linkedDocId'):
+            raise HTTPException(status_code=400, detail='node has no linked document')
+        raise HTTPException(status_code=404, detail='node not found')
+    return result
+
+
+@router.post('/{document_id}/bind-link')
+def bind_document_link(document_id: str, payload: BindLinkRequest, user: CurrentUser) -> dict[str, Any]:
+    """Bind an existing document to a node via linkedDocId."""
+    document = get_document(document_id)
+    if document is None:
+        raise HTTPException(status_code=404, detail='document not found')
+
+    # Check access to source document
+    is_admin = user['role'] in {'admin', 'reviewer'}
+    is_owner = document.get('owner_id') == user['id']
+    if not is_admin and not is_owner:
+        raise HTTPException(status_code=404, detail='document not found')
+
+    # Check if linked document exists
+    linked_doc = get_document(payload.linked_doc_id)
+    if linked_doc is None:
+        raise HTTPException(status_code=404, detail='linked document not found')
+
+    result = bind_link(document_id, payload.node_id, payload.linked_doc_id, user['id'])
+    if result is None:
+        raise HTTPException(status_code=404, detail='node not found')
+    return result
 
 
 # Mount versions under /{document_id}/versions

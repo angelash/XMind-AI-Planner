@@ -408,3 +408,208 @@ def move_document_to_project(document_id: str, project_id: str | None, moved_by:
     )
 
     return updated
+
+
+# Node association functions
+
+def _find_node_in_tree(node: dict[str, Any], node_id: str) -> dict[str, Any] | None:
+    """Recursively find a node in the tree by ID.
+
+    Args:
+        node: Current node to search
+        node_id: Target node ID
+
+    Returns:
+        Found node or None
+    """
+    if node.get("id") == node_id:
+        return node
+    for child in node.get("children", []):
+        found = _find_node_in_tree(child, node_id)
+        if found:
+            return found
+    return None
+
+
+def _deep_copy_node(node: dict[str, Any]) -> dict[str, Any]:
+    """Deep copy a node, generating new IDs.
+
+    Args:
+        node: Node to copy
+
+    Returns:
+        Deep copy with new IDs
+    """
+    import copy
+    new_node = copy.deepcopy(node)
+    # Generate new IDs
+    new_node["id"] = f"node-{str(uuid4())[:8]}"
+    if "children" in new_node:
+        new_node["children"] = [_deep_copy_node(child) for child in new_node["children"]]
+    return new_node
+
+
+def export_subtree_as_document(
+    document_id: str,
+    node_id: str,
+    clear_original_children: bool = False,
+    changed_by: str | None = None,
+) -> dict[str, Any] | None:
+    """Export a node subtree as a new document and link it to the original node.
+
+    Args:
+        document_id: Source document ID
+        node_id: Node to export (becomes root of new document)
+        clear_original_children: If True, remove children from original node
+        changed_by: User who initiated the export
+
+    Returns:
+        Dict with new_document_id and exported_node_id, or None if not found
+    """
+    current = get_document(document_id)
+    if current is None:
+        return None
+
+    content = current["content"]
+    node_data = content.get("nodeData", {})
+    
+    # Find the node to export
+    target_node = _find_node_in_tree(node_data, node_id)
+    if target_node is None:
+        return None
+
+    # Deep copy the subtree
+    exported_subtree = _deep_copy_node(target_node)
+    exported_subtree["root"] = True
+
+    # Create new document with the subtree
+    new_title = f"{target_node.get('topic', 'Exported')} - 子图"
+    new_doc = create_document(
+        new_title,
+        {"nodeData": exported_subtree},
+        current.get("owner_id"),
+        current.get("project_id"),
+    )
+
+    # Update original node to have linkedDocId
+    def update_node_link(node: dict[str, Any]) -> bool:
+        if node.get("id") == node_id:
+            node["linkedDocId"] = new_doc["id"]
+            if clear_original_children:
+                node["children"] = []
+            return True
+        for child in node.get("children", []):
+            if update_node_link(child):
+                return True
+        return False
+
+    update_node_link(node_data)
+
+    # Update the original document
+    update_document(document_id, {"content": content}, changed_by)
+
+    return {
+        "new_document_id": new_doc["id"],
+        "exported_node_id": node_id,
+    }
+
+
+def recall_association(
+    document_id: str,
+    node_id: str,
+    changed_by: str | None = None,
+) -> dict[str, Any] | None:
+    """Recall (merge) an associated mind map back into the node.
+
+    Args:
+        document_id: Source document ID
+        node_id: Node with linkedDocId to recall
+        changed_by: User who initiated the recall
+
+    Returns:
+        Dict with merged_count, or None if not found/not linked
+    """
+    current = get_document(document_id)
+    if current is None:
+        return None
+
+    content = current["content"]
+    node_data = content.get("nodeData", {})
+
+    # Find the node
+    target_node = _find_node_in_tree(node_data, node_id)
+    if target_node is None:
+        return None
+
+    linked_doc_id = target_node.get("linkedDocId")
+    if not linked_doc_id:
+        return None
+
+    # Get the linked document
+    linked_doc = get_document(linked_doc_id)
+    if linked_doc is None:
+        return None
+
+    # Get children from linked document
+    linked_node_data = linked_doc.get("content", {}).get("nodeData", {})
+    linked_children = linked_node_data.get("children", [])
+
+    # Deep copy children to avoid reference issues
+    import copy
+    merged_children = copy.deepcopy(linked_children)
+
+    # Merge children into the target node
+    existing_children = target_node.get("children", [])
+    target_node["children"] = existing_children + merged_children
+
+    # Clear linkedDocId
+    del target_node["linkedDocId"]
+
+    # Update the document
+    update_document(document_id, {"content": content}, changed_by)
+
+    return {
+        "merged_count": len(merged_children),
+        "node_id": node_id,
+    }
+
+
+def bind_link(
+    document_id: str,
+    node_id: str,
+    linked_doc_id: str,
+    changed_by: str | None = None,
+) -> dict[str, Any] | None:
+    """Bind an existing document to a node via linkedDocId.
+
+    Args:
+        document_id: Source document ID
+        node_id: Node to link
+        linked_doc_id: Document to link to
+        changed_by: User who initiated the binding
+
+    Returns:
+        Updated document or None if not found
+    """
+    current = get_document(document_id)
+    if current is None:
+        return None
+
+    # Verify linked document exists
+    linked_doc = get_document(linked_doc_id)
+    if linked_doc is None:
+        return None
+
+    content = current["content"]
+    node_data = content.get("nodeData", {})
+
+    # Find the node
+    target_node = _find_node_in_tree(node_data, node_id)
+    if target_node is None:
+        return None
+
+    # Set linkedDocId
+    target_node["linkedDocId"] = linked_doc_id
+
+    # Update the document
+    return update_document(document_id, {"content": content}, changed_by)

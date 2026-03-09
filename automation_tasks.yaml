@@ -296,10 +296,10 @@ tasks:
   status: done
 - id: FILE-04
   milestone: M4
-  title: 鑴戝浘鍏宠仈鎿嶄綔
+  title: 脑图关联操作
   depends_on:
   - FILE-02
-  status: waiting
+  status: done
 - id: GAP-01
   milestone: M5
   title: 鎾ら攢/閲嶅仛+蹇嵎閿?

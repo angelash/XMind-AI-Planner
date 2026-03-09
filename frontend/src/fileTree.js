@@ -181,6 +181,11 @@ function renderFileTree() {
   fileTreeContainer.querySelectorAll('.file-tree-item').forEach(el => {
     el.addEventListener('dblclick', handleItemDblClick);
   });
+
+  // Bind context menu (right-click)
+  fileTreeContainer.querySelectorAll('.file-tree-item').forEach(el => {
+    el.addEventListener('contextmenu', handleItemContextMenu);
+  });
 }
 
 /**
@@ -287,6 +292,102 @@ function handleItemClick(e) {
     detail: { id, type, path }
   });
   document.dispatchEvent(event);
+}
+
+/**
+ * Handle right-click context menu
+ * @param {Event} e - Contextmenu event
+ */
+function handleItemContextMenu(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  
+  const itemEl = e.currentTarget;
+  const id = itemEl.dataset.id;
+  const type = itemEl.dataset.type;
+  const path = itemEl.dataset.path;
+
+  // Update selection
+  fileTreeContainer.querySelectorAll('.file-tree-item').forEach(el => {
+    el.classList.remove('selected');
+  });
+  itemEl.classList.add('selected');
+  selectedItemId = id;
+
+  // Show toolbar for selected item
+  fileTreeToolbar.classList.remove('hidden');
+
+  // Show context menu
+  showContextMenu(e.clientX, e.clientY, id, type);
+}
+
+/**
+ * Show context menu at position
+ * @param {number} x - X position
+ * @param {number} y - Y position
+ * @param {string} itemId - Item ID
+ * @param {string} itemType - Item type (file/folder)
+ */
+function showContextMenu(x, y, itemId, itemType) {
+  // Remove existing context menu
+  hideContextMenu();
+
+  const menu = document.createElement('div');
+  menu.id = 'file-tree-context-menu';
+  menu.className = 'file-tree-context-menu';
+  menu.innerHTML = `
+    <div class="context-menu-item" data-action="add-node">
+      📌 添加为节点
+    </div>
+    <div class="context-menu-separator"></div>
+    <div class="context-menu-item" data-action="rename">
+      ✏️ 重命名
+    </div>
+    <div class="context-menu-item" data-action="delete">
+      🗑️ 删除
+    </div>
+  `;
+
+  // Position menu
+  menu.style.left = `${x}px`;
+  menu.style.top = `${y}px`;
+
+  // Add click handlers
+  menu.querySelectorAll('.context-menu-item').forEach(el => {
+    el.addEventListener('click', (e) => {
+      const action = el.dataset.action;
+      hideContextMenu();
+      
+      switch (action) {
+        case 'add-node':
+          addAsNode(itemId);
+          break;
+        case 'rename':
+          renameItem(itemId);
+          break;
+        case 'delete':
+          deleteItem(itemId);
+          break;
+      }
+    });
+  });
+
+  document.body.appendChild(menu);
+
+  // Close menu when clicking outside
+  setTimeout(() => {
+    document.addEventListener('click', hideContextMenu, { once: true });
+  }, 0);
+}
+
+/**
+ * Hide context menu
+ */
+function hideContextMenu() {
+  const menu = document.getElementById('file-tree-context-menu');
+  if (menu) {
+    menu.remove();
+  }
 }
 
 /**

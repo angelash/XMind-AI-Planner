@@ -275,7 +275,7 @@ tasks:
   title: 提交工作区与合并区
   depends_on:
   - AUTO-03
-  status: waiting
+  status: done
 - id: FILE-01
   milestone: M4
   title: 文件目录树面板

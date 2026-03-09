@@ -177,7 +177,7 @@ tasks:
   title: 版本列表/预览/回滚
   depends_on:
   - VER-01
-  status: waiting
+  status: done
 - id: PROJ-01
   milestone: M3
   title: 项目工作区与成员管理

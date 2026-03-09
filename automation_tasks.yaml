@@ -165,7 +165,7 @@ tasks:
   depends_on:
   - DOC-01
   - AUTH-01
-  status: waiting
+  status: done
 - id: VER-01
   milestone: M3
   title: 版本历史记录

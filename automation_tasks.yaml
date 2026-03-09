@@ -189,7 +189,7 @@ tasks:
   title: 文档跨工作区移动
   depends_on:
   - PROJ-01
-  status: waiting
+  status: developing
 - id: RT-01
   milestone: M3
   title: WebSocket 连接管理

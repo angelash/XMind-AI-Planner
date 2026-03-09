@@ -21,6 +21,7 @@ from app.services.project_store import (
     update_project,
     update_project_member_role,
 )
+from app.services.document_store import list_documents
 from app.services.user_store import get_user_by_id
 
 router = APIRouter()
@@ -223,3 +224,21 @@ def remove_member(project_id: str, user_id: str, user: CurrentUser) -> None:
     if not remove_project_member(project_id, user_id):
         raise HTTPException(status_code=404, detail="member not found")
     return None
+
+
+@router.get("/{project_id}/documents")
+def list_project_documents(project_id: str, user: CurrentUser) -> dict[str, list[dict[str, Any]]]:
+    """List documents in a project. Only members can view."""
+    project = get_project(project_id)
+    if project is None:
+        raise HTTPException(status_code=404, detail="project not found")
+
+    # Admins can view any project's documents
+    if user.get("role") == "admin":
+        return {"items": list_documents(project_id=project_id)}
+
+    # Regular users must be members
+    if not is_project_member(project_id, user["id"]):
+        raise HTTPException(status_code=403, detail="not a project member")
+
+    return {"items": list_documents(project_id=project_id)}

@@ -31,30 +31,49 @@ def _to_payload(row: sqlite3.Row) -> dict[str, Any]:
         "title": row["title"],
         "content": json.loads(row["content_json"]),
         "owner_id": row["owner_id"],
+        "project_id": row["project_id"],
         "created_at": row["created_at"],
         "updated_at": row["updated_at"],
     }
 
 
-def list_documents(owner_id: str | None = None) -> list[dict[str, Any]]:
+def list_documents(owner_id: str | None = None, project_id: str | None = None) -> list[dict[str, Any]]:
+    """List documents, optionally filtered by owner_id or project_id.
+    
+    For project documents, use project_id filter.
+    For personal workspace documents, use owner_id filter with project_id=None.
+    """
     with _connect() as conn:
-        if owner_id is None:
+        if project_id is not None:
+            # List project documents
             rows = conn.execute(
                 """
-                SELECT id, title, content_json, owner_id, created_at, updated_at
+                SELECT id, title, content_json, owner_id, project_id, created_at, updated_at
                 FROM documents
+                WHERE project_id = ?
                 ORDER BY updated_at DESC, created_at DESC, id DESC
-                """
+                """,
+                (project_id,),
             ).fetchall()
-        else:
+        elif owner_id is not None:
+            # List personal workspace documents (owner_id match AND project_id IS NULL)
             rows = conn.execute(
                 """
-                SELECT id, title, content_json, owner_id, created_at, updated_at
+                SELECT id, title, content_json, owner_id, project_id, created_at, updated_at
                 FROM documents
-                WHERE owner_id = ?
+                WHERE owner_id = ? AND project_id IS NULL
                 ORDER BY updated_at DESC, created_at DESC, id DESC
                 """,
                 (owner_id,),
+            ).fetchall()
+        else:
+            # List all documents (admin view)
+            rows = conn.execute(
+                """
+                SELECT id, title, content_json, owner_id, project_id, created_at, updated_at
+                FROM documents
+                ORDER BY updated_at DESC, created_at DESC, id DESC
+                """
             ).fetchall()
     return [_to_payload(row) for row in rows]
 
@@ -63,7 +82,7 @@ def get_document(document_id: str) -> dict[str, Any] | None:
     with _connect() as conn:
         row = conn.execute(
             """
-            SELECT id, title, content_json, owner_id, created_at, updated_at
+            SELECT id, title, content_json, owner_id, project_id, created_at, updated_at
             FROM documents
             WHERE id = ?
             """,
@@ -74,15 +93,15 @@ def get_document(document_id: str) -> dict[str, Any] | None:
     return _to_payload(row)
 
 
-def create_document(title: str, content: dict[str, Any], owner_id: str | None) -> dict[str, Any]:
+def create_document(title: str, content: dict[str, Any], owner_id: str | None, project_id: str | None = None) -> dict[str, Any]:
     document_id = str(uuid4())
     with _connect() as conn:
         conn.execute(
             """
-            INSERT INTO documents(id, title, content_json, owner_id)
-            VALUES(?, ?, ?, ?)
+            INSERT INTO documents(id, title, content_json, owner_id, project_id)
+            VALUES(?, ?, ?, ?, ?)
             """,
-            (document_id, title, json.dumps(content, ensure_ascii=False), owner_id),
+            (document_id, title, json.dumps(content, ensure_ascii=False), owner_id, project_id),
         )
     document = get_document(document_id)
     if document is None:
@@ -90,16 +109,16 @@ def create_document(title: str, content: dict[str, Any], owner_id: str | None) -
     return document
 
 
-def _update_document_internal(document_id: str, title: str, content: dict[str, Any], owner_id: str | None) -> dict[str, Any] | None:
+def _update_document_internal(document_id: str, title: str, content: dict[str, Any], owner_id: str | None, project_id: str | None) -> dict[str, Any] | None:
     """Internal function to update document without creating version."""
     with _connect() as conn:
         conn.execute(
             """
             UPDATE documents
-            SET title = ?, content_json = ?, owner_id = ?, updated_at = CURRENT_TIMESTAMP
+            SET title = ?, content_json = ?, owner_id = ?, project_id = ?, updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
             """,
-            (title, json.dumps(content, ensure_ascii=False), owner_id, document_id),
+            (title, json.dumps(content, ensure_ascii=False), owner_id, project_id, document_id),
         )
     return get_document(document_id)
 
@@ -113,8 +132,9 @@ def update_document(document_id: str, updates: dict[str, Any], changed_by: str |
     title = updates.get("title", current["title"])
     content = updates.get("content", current["content"])
     owner_id = updates.get("owner_id", current["owner_id"])
+    project_id = updates.get("project_id", current["project_id"])
 
-    updated = _update_document_internal(document_id, title, content, owner_id)
+    updated = _update_document_internal(document_id, title, content, owner_id, project_id)
     if updated is None:
         return None
 
@@ -338,7 +358,7 @@ def rollback_to_version(document_id: str, version_id: str, changed_by: str | Non
     )
 
     # Update document to the version content (without creating version)
-    updated = _update_document_internal(document_id, version["title"], version["content"], current["owner_id"])
+    updated = _update_document_internal(document_id, version["title"], version["content"], current["owner_id"], current["project_id"])
     if updated is None:
         return None
 
@@ -349,6 +369,42 @@ def rollback_to_version(document_id: str, version_id: str, changed_by: str | Non
         version["content"],
         changed_by,
         f"Rolled back to version {version['version_number']}",
+    )
+
+    return updated
+
+
+def move_document_to_project(document_id: str, project_id: str | None, moved_by: str | None = None) -> dict[str, Any] | None:
+    """Move a document to a project workspace or back to personal workspace.
+
+    Args:
+        document_id: The document to move
+        project_id: Target project ID, or None to move to personal workspace
+        moved_by: User who initiated the move
+
+    Returns:
+        Updated document or None if not found
+    """
+    current = get_document(document_id)
+    if current is None:
+        return None
+
+    # Create a version before moving
+    create_document_version(
+        document_id,
+        current["title"],
+        current["content"],
+        moved_by,
+        f"Moved to {'personal workspace' if project_id is None else f'project {project_id}'}",
+    )
+
+    # Update the document's project_id
+    updated = _update_document_internal(
+        document_id,
+        current["title"],
+        current["content"],
+        current["owner_id"],
+        project_id,
     )
 
     return updated

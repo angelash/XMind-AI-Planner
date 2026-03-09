@@ -11,6 +11,7 @@ from app.services.document_store import (
     delete_document,
     get_document,
     list_documents,
+    move_document_to_project,
     update_document,
 )
 from app.api.v1.endpoints.versions import router as versions_router
@@ -22,12 +23,18 @@ class DocumentCreateRequest(BaseModel):
     title: str = Field(min_length=1, max_length=200)
     content: dict[str, Any] = Field(default_factory=dict)
     owner_id: str | None = None
+    project_id: str | None = None
 
 
 class DocumentPatchRequest(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=200)
     content: dict[str, Any] | None = None
     owner_id: str | None = None
+    project_id: str | None = None
+
+
+class DocumentMoveRequest(BaseModel):
+    project_id: str | None = None
 
 
 @router.get('')
@@ -48,7 +55,7 @@ def create_document_item(payload: DocumentCreateRequest, user: CurrentUser) -> d
     if user['role'] != 'admin' and owner_id != user['id']:
         owner_id = user['id']
 
-    return create_document(payload.title, payload.content, owner_id)
+    return create_document(payload.title, payload.content, owner_id, payload.project_id)
 
 
 @router.get('/{document_id}')
@@ -98,6 +105,51 @@ def delete_document_item(document_id: str, user: CurrentUser) -> Response:
     if not delete_document(document_id):
         raise HTTPException(status_code=404, detail='document not found')
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post('/{document_id}/move')
+def move_document(document_id: str, payload: DocumentMoveRequest, user: CurrentUser) -> dict[str, Any]:
+    """Move a document to a project workspace or back to personal workspace."""
+    from app.services.project_store import get_project, is_project_member
+
+    document = get_document(document_id)
+    if document is None:
+        raise HTTPException(status_code=404, detail='document not found')
+
+    # Check access rights based on document location
+    is_admin = user['role'] in {'admin', 'reviewer'}
+    is_owner = document.get('owner_id') == user['id']
+
+    # For personal workspace documents, only owner can access
+    if document.get('project_id') is None:
+        if not is_admin and not is_owner:
+            raise HTTPException(status_code=404, detail='document not found')
+    else:
+        # For project documents, check project membership
+        if not is_admin and not is_owner:
+            if not is_project_member(document['project_id'], user['id']):
+                raise HTTPException(status_code=404, detail='document not found')
+
+    # If moving to a project, verify the project exists and user is a member
+    if payload.project_id is not None:
+        project = get_project(payload.project_id)
+        if project is None:
+            raise HTTPException(status_code=404, detail='project not found')
+
+        # Admin can move to any project
+        if not is_admin:
+            if not is_project_member(payload.project_id, user['id']):
+                raise HTTPException(status_code=403, detail='not a member of target project')
+
+    # If moving from a project to personal workspace, verify user owns the document
+    if document.get('project_id') is not None and payload.project_id is None:
+        if not is_admin and not is_owner:
+            raise HTTPException(status_code=403, detail='can only move owned documents to personal workspace')
+
+    updated = move_document_to_project(document_id, payload.project_id, user['id'])
+    if updated is None:
+        raise HTTPException(status_code=404, detail='document not found')
+    return updated
 
 
 # Mount versions under /{document_id}/versions

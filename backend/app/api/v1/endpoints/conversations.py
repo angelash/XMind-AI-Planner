@@ -1,6 +1,7 @@
 """Agent conversation API endpoints.
 
 AG-02: 对话模型与 API
+AG-03: Diff + Keep/Undo
 """
 from __future__ import annotations
 
@@ -28,6 +29,13 @@ from app.services.conversation_store import (
     update_modification_status,
 )
 from app.services.document_store import get_document
+from app.services.modification_applier import (
+    apply_modification,
+    revert_modification,
+    batch_apply_modifications,
+    batch_revert_modifications,
+    get_modification_diff,
+)
 
 router = APIRouter()
 
@@ -259,3 +267,147 @@ def count_pending_modifications_endpoint(
 
     count = count_pending_modifications(conversation["id"])
     return {"pending_count": count}
+
+
+# ============ AG-03: Apply/Revert Endpoints ============
+
+class BatchApplyRequest(BaseModel):
+    message_id: int | None = None
+
+
+class BatchRevertRequest(BaseModel):
+    message_id: int | None = None
+
+
+@router.post("/{conversation_uuid}/modifications/{modification_id}/apply")
+def apply_modification_endpoint(
+    conversation_uuid: str,
+    modification_id: int,
+    user: CurrentUser,
+) -> dict[str, Any]:
+    """Apply (keep) a single modification to the document.
+
+    AG-03: Updates the document content with the modification's after_value
+    and marks the modification as accepted.
+    """
+    conversation = get_conversation(conversation_uuid)
+    if conversation is None:
+        raise HTTPException(status_code=404, detail="conversation not found")
+
+    modification = get_modification(modification_id)
+    if modification is None:
+        raise HTTPException(status_code=404, detail="modification not found")
+
+    if modification["conversation_id"] != conversation["id"]:
+        raise HTTPException(status_code=400, detail="modification does not belong to this conversation")
+
+    result = apply_modification(modification_id)
+
+    if not result["applied"]:
+        raise HTTPException(status_code=400, detail=result.get("reason", "failed to apply modification"))
+
+    return result
+
+
+@router.post("/{conversation_uuid}/modifications/{modification_id}/revert")
+def revert_modification_endpoint(
+    conversation_uuid: str,
+    modification_id: int,
+    user: CurrentUser,
+) -> dict[str, Any]:
+    """Revert (undo) an applied modification.
+
+    AG-03: Restores the document content to the modification's before_value
+    and marks the modification as rejected.
+    """
+    conversation = get_conversation(conversation_uuid)
+    if conversation is None:
+        raise HTTPException(status_code=404, detail="conversation not found")
+
+    modification = get_modification(modification_id)
+    if modification is None:
+        raise HTTPException(status_code=404, detail="modification not found")
+
+    if modification["conversation_id"] != conversation["id"]:
+        raise HTTPException(status_code=400, detail="modification does not belong to this conversation")
+
+    result = revert_modification(modification_id)
+
+    if not result["reverted"]:
+        raise HTTPException(status_code=400, detail=result.get("reason", "failed to revert modification"))
+
+    return result
+
+
+@router.get("/{conversation_uuid}/modifications/{modification_id}/diff")
+def get_modification_diff_endpoint(
+    conversation_uuid: str,
+    modification_id: int,
+    user: CurrentUser,
+) -> dict[str, Any]:
+    """Get a diff preview of a modification.
+
+    AG-03: Returns before/after values for preview in the UI.
+    """
+    conversation = get_conversation(conversation_uuid)
+    if conversation is None:
+        raise HTTPException(status_code=404, detail="conversation not found")
+
+    modification = get_modification(modification_id)
+    if modification is None:
+        raise HTTPException(status_code=404, detail="modification not found")
+
+    if modification["conversation_id"] != conversation["id"]:
+        raise HTTPException(status_code=400, detail="modification does not belong to this conversation")
+
+    result = get_modification_diff(modification_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="modification not found")
+
+    return result
+
+
+@router.post("/{conversation_uuid}/modifications/batch-apply")
+def batch_apply_modifications_endpoint(
+    conversation_uuid: str,
+    payload: BatchApplyRequest,
+    user: CurrentUser,
+) -> dict[str, Any]:
+    """Apply all pending modifications for a conversation or message.
+
+    AG-03: Batch apply (keep) operation. If message_id is provided,
+    only applies modifications from that message.
+    """
+    conversation = get_conversation(conversation_uuid)
+    if conversation is None:
+        raise HTTPException(status_code=404, detail="conversation not found")
+
+    result = batch_apply_modifications(
+        conversation_id=conversation["id"],
+        message_id=payload.message_id,
+    )
+
+    return result
+
+
+@router.post("/{conversation_uuid}/modifications/batch-revert")
+def batch_revert_modifications_endpoint(
+    conversation_uuid: str,
+    payload: BatchRevertRequest,
+    user: CurrentUser,
+) -> dict[str, Any]:
+    """Revert all accepted modifications for a conversation or message.
+
+    AG-03: Batch revert (undo) operation. If message_id is provided,
+    only reverts modifications from that message.
+    """
+    conversation = get_conversation(conversation_uuid)
+    if conversation is None:
+        raise HTTPException(status_code=404, detail="conversation not found")
+
+    result = batch_revert_modifications(
+        conversation_id=conversation["id"],
+        message_id=payload.message_id,
+    )
+
+    return result

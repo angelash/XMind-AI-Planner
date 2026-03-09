@@ -2,6 +2,7 @@
 
 from app.api.v1.endpoints.ai import router as ai_router
 from app.api.v1.endpoints.auth import router as auth_router
+from app.api.v1.endpoints.conversations import router as conversations_router
 from app.api.v1.endpoints.documents import router as documents_router
 from app.api.v1.endpoints.export import router as export_router
 from app.api.v1.endpoints.imports import router as imports_router
@@ -26,3 +27,4 @@ router.include_router(workspace_router, prefix='/workspace', tags=['workspace'])
 router.include_router(projects_router, prefix='/projects', tags=['projects'])
 router.include_router(review_router, prefix='/review', tags=['review'])
 router.include_router(websocket_router, tags=['websocket'])
+router.include_router(conversations_router, prefix='/conversations', tags=['conversations'])

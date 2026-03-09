@@ -226,14 +226,14 @@ tasks:
   title: Agent 面板 UI
   depends_on:
   - CORE-02
-  status: developing
+  status: done
 - id: AG-02
   milestone: M4
   title: 对话模型与 API
   depends_on:
   - AG-01
   - BOOT-04
-  status: waiting
+  status: developing
 - id: AG-03
   milestone: M4
   title: Diff + Keep/Undo

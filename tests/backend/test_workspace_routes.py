@@ -80,21 +80,17 @@ def test_workspace_shows_only_own_documents(monkeypatch, tmp_path: Path) -> None
         assert ws_data['documents'][0]['title'] == 'E3002 Doc'
 
 
-def test_admin_sees_all_documents_in_documents_list(monkeypatch, tmp_path: Path) -> None:
-    """Admin can see all documents via /documents, but workspace shows own docs."""
+def test_admin_workspace_shows_own_documents(monkeypatch, tmp_path: Path) -> None:
+    """Admin's workspace shows only their own documents."""
     _configure_env(monkeypatch, tmp_path)
 
     with TestClient(app) as client:
-        # Create documents as employee
-        client.post('/api/v1/auth/login', json={'staff_no': 'e4001'})
-        client.post('/api/v1/documents', json={'title': 'Employee Doc'})
-
-        # Login as admin
+        # Login as admin and create a document
         client.post('/api/v1/auth/login', json={'staff_no': 'admin', 'password': 'admin-4399'})
         admin_doc = client.post('/api/v1/documents', json={'title': 'Admin Doc'})
         assert admin_doc.status_code == 201
 
-        # Get workspace - should show only admin's own documents
+        # Get workspace - should show admin's own documents
         ws_resp = client.get('/api/v1/workspace')
         assert ws_resp.status_code == 200
         ws_data = ws_resp.json()

@@ -37,10 +37,16 @@ def list_document_items(user: CurrentUser) -> dict[str, list[dict[str, Any]]]:
 
 @router.post('', status_code=status.HTTP_201_CREATED)
 def create_document_item(payload: DocumentCreateRequest, user: CurrentUser) -> dict[str, Any]:
+    # Default owner to current user.
+    # NOTE: Use explicit None check so empty strings don't accidentally pass.
     owner_id = payload.owner_id
-    if user['role'] != 'admin':
-        # Employees can only create documents under themselves.
+    if owner_id is None:
         owner_id = user['id']
+
+    # Admin can override owner_id to assign to others.
+    if user['role'] != 'admin' and owner_id != user['id']:
+        owner_id = user['id']
+
     return create_document(payload.title, payload.content, owner_id)
 
 

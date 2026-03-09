@@ -613,3 +613,13 @@ main {
 .file-tree-toolbar button:hover {
   background: #f3f4f6;
 }
+
+.file-tree-toolbar #btn-add-as-node {
+  background: #0e7490;
+  color: #ffffff;
+  border-color: #0e7490;
+}
+
+.file-tree-toolbar #btn-add-as-node:hover {
+  background: #0891b2;
+}

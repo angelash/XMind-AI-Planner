@@ -194,6 +194,42 @@ function bindControls() {
   controls.center?.addEventListener("click", centerCanvas);
 }
 
+/**
+ * Handle file tree add-as-node event
+ * @param {CustomEvent} event - Custom event with item and node detail
+ */
+function handleFileTreeAddAsNode(event) {
+  const { item, node } = event.detail;
+  if (!node) {
+    setStatus("No node data received");
+    return;
+  }
+
+  const parentNode = getActiveNode();
+  if (!parentNode) {
+    setStatus("Cannot add node: no active node selected");
+    return;
+  }
+
+  // Add the node as a child of the selected node
+  if (typeof mind.addChild === "function") {
+    mind.addChild(parentNode, node);
+    setStatus(`Added "${item.name}" as node`);
+  } else {
+    // Fallback: manually add to children
+    parentNode.children = parentNode.children || [];
+    parentNode.children.push(node);
+    if (typeof mind.refresh === "function") {
+      mind.refresh();
+    }
+    setStatus(`Added "${item.name}" as node`);
+  }
+}
+
+function installFileTreeListener() {
+  document.addEventListener("fileTreeAddAsNode", handleFileTreeAddAsNode);
+}
+
 if (window.MindElixir && mount) {
   mind = new window.MindElixir({
     el: mount,
@@ -206,6 +242,7 @@ if (window.MindElixir && mount) {
   });
   mind.init(toMindElixirDocument(defaultNode));
   installSelectionListener();
+  installFileTreeListener();
   bindControls();
   refreshNodeLabel();
 } else {

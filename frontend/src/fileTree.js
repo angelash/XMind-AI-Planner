@@ -54,6 +54,7 @@ function createPanelStructure() {
       <div class="file-tree-empty">请先选择项目</div>
     </div>
     <div id="file-tree-toolbar" class="file-tree-toolbar hidden">
+      <button id="btn-add-as-node" type="button">添加为节点</button>
       <button id="btn-rename-item" type="button">重命名</button>
       <button id="btn-delete-item" type="button">删除</button>
     </div>
@@ -88,6 +89,13 @@ function bindEventListeners() {
   document.getElementById('btn-refresh-tree')?.addEventListener('click', () => {
     if (currentProjectId) {
       loadFileTree(currentProjectId);
+    }
+  });
+
+  // Add as node button
+  document.getElementById('btn-add-as-node')?.addEventListener('click', () => {
+    if (selectedItemId) {
+      addAsNode(selectedItemId);
     }
   });
 
@@ -425,6 +433,46 @@ async function deleteItem(itemId) {
     console.error('Error deleting item:', error);
     alert('删除失败: ' + error.message);
   }
+}
+
+/**
+ * Add selected file/folder as a node in the mind map
+ * @param {string} itemId - Item ID
+ */
+function addAsNode(itemId) {
+  const item = findItem(fileTreeData, itemId);
+  if (!item) return;
+
+  const node = fileTreeItemToNode(item);
+  
+  // Dispatch custom event for main.js to handle
+  const event = new CustomEvent('fileTreeAddAsNode', {
+    detail: { item, node }
+  });
+  document.dispatchEvent(event);
+}
+
+/**
+ * Convert a file tree item to a mind map node structure
+ * @param {Object} item - File tree item
+ * @returns {Object} Mind map node
+ */
+function fileTreeItemToNode(item) {
+  const isFolder = item.type === 'folder';
+  const icon = isFolder ? '📁' : getFileIcon(item.name);
+  
+  const node = {
+    id: `node-${item.id}`,
+    topic: `${icon} ${item.name}`,
+    memo: item.path,
+  };
+
+  // Recursively convert children for folders
+  if (isFolder && item.children && item.children.length > 0) {
+    node.children = item.children.map(child => fileTreeItemToNode(child));
+  }
+
+  return node;
 }
 
 /**

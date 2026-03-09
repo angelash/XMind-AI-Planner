@@ -1,6 +1,13 @@
 import { toMindElixirDocument } from "./nodeModel.js";
 import { setContextNode, clearContextNode } from "./agent.js";
 import { setProject as setMdEditorProject } from "./mdEditor.js";
+import {
+  initHistoryManager,
+  createCommand,
+  executeCommand,
+  bindToolbarButtons,
+  CommandType,
+} from "./history.js";
 
 const mount = document.getElementById("mindmap");
 const fallback = document.getElementById("fallback");
@@ -90,6 +97,9 @@ function addChildNode() {
     topic: "New Node",
   };
 
+  // Store previous state for undo
+  const previousChildren = parentNode.children ? [...parentNode.children] : [];
+
   if (typeof mind.addChild === "function") {
     mind.addChild(parentNode, child);
   } else {
@@ -99,6 +109,17 @@ function addChildNode() {
       mind.refresh();
     }
   }
+
+  // Create and execute history command
+  const command = createCommand(CommandType.ADD_CHILD, {
+    parentNode,
+    child,
+    previousChildren,
+  });
+  if (command) {
+    executeCommand(command);
+  }
+
   refreshNodeLabel();
 }
 
@@ -114,8 +135,9 @@ function editNodeText() {
     return;
   }
 
-  const nextText = window.prompt("Edit node text", node.topic || "");
-  if (!nextText) {
+  const oldTopic = node.topic || "";
+  const nextText = window.prompt("Edit node text", oldTopic);
+  if (!nextText || nextText === oldTopic) {
     return;
   }
   if (typeof mind.updateNode === "function") {
@@ -126,6 +148,17 @@ function editNodeText() {
       mind.refresh();
     }
   }
+
+  // Create and execute history command
+  const command = createCommand(CommandType.EDIT_NODE, {
+    node,
+    oldTopic,
+    newTopic: nextText,
+  });
+  if (command) {
+    executeCommand(command);
+  }
+
   refreshNodeLabel();
 }
 
@@ -139,13 +172,52 @@ function deleteNode() {
     setStatus("Root node cannot be deleted");
     return;
   }
+
+  // Find parent and index for undo
+  let parent = null;
+  let index = -1;
+  if (mind && mind.nodeData) {
+    const findParent = (current, target, p) => {
+      if (!current || !current.children) return false;
+      for (let i = 0; i < current.children.length; i++) {
+        if (current.children[i] === target) {
+          parent = current;
+          index = i;
+          return true;
+        }
+        if (findParent(current.children[i], target, current.children[i])) {
+          return true;
+        }
+      }
+      return false;
+    };
+    findParent(mind.nodeData, node, null);
+  }
+
+  const children = node.children ? [...node.children] : null;
+
   if (typeof mind.removeNode === "function") {
     mind.removeNode(node);
-    selectedNode = null;
-    refreshNodeLabel();
   } else {
     setStatus("Delete is not available in current MindElixir build");
+    return;
   }
+
+  // Create and execute history command
+  if (parent) {
+    const command = createCommand(CommandType.DELETE_NODE, {
+      node,
+      parent,
+      index,
+      children,
+    });
+    if (command) {
+      executeCommand(command);
+    }
+  }
+
+  selectedNode = null;
+  refreshNodeLabel();
 }
 
 function toggleFold() {
@@ -242,6 +314,11 @@ if (window.MindElixir && mount) {
     keypress: true,
   });
   mind.init(toMindElixirDocument(defaultNode));
+  
+  // Initialize history manager for undo/redo (GAP-01)
+  initHistoryManager(mind);
+  bindToolbarButtons();
+  
   installSelectionListener();
   installFileTreeListener();
   bindControls();

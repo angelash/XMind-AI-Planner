@@ -48,6 +48,22 @@ body {
   background: #f8fafc;
 }
 
+.editor-toolbar button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.editor-toolbar button:disabled:hover {
+  background: #ffffff;
+}
+
+.toolbar-divider {
+  width: 1px;
+  height: 24px;
+  background: #d0d7de;
+  margin: 0 4px;
+}
+
 .editor-status {
   margin-left: auto;
   font-size: 13px;

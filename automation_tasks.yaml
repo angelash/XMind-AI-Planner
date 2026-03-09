@@ -183,7 +183,7 @@ tasks:
   title: 项目工作区与成员管理
   depends_on:
   - AUTH-02
-  status: developing
+  status: done
 - id: PROJ-02
   milestone: M3
   title: 文档跨工作区移动

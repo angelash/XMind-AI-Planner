@@ -251,7 +251,7 @@ tasks:
   title: 节点 ID 上下文约束
   depends_on:
   - AG-03
-  status: developing
+  status: done
 - id: AUTO-01
   milestone: M4
   title: 自动化任务队列状态机

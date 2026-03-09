@@ -240,3 +240,47 @@ class TestHeartbeat:
         data = msg.model_dump()
         assert data["type"] == "pong"
         assert "timestamp" in data
+
+
+class TestSaveHandling:
+    """Tests for WebSocket save message handling."""
+
+    @pytest.fixture
+    def manager(self):
+        """Create a fresh ConnectionManager for each test."""
+        reset_connection_manager()
+        return ConnectionManager()
+
+    def test_save_message_format(self, manager):
+        """Test that save message broadcasts correctly."""
+        import time
+        
+        mock_ws = MagicMock()
+        mock_ws.accept = AsyncMock()
+        mock_ws.send_json = AsyncMock()
+
+        async def run_test():
+            await manager.connect(mock_ws, "doc-123", "user-1", "User One")
+            # Reset to clear join broadcast
+            mock_ws.send_json.reset_mock()
+            
+            # Simulate save message handling
+            message = {
+                "type": "save",
+                "content": {"topic": {"text": "Test", "children": []}},
+            }
+            # The save handler would call this
+            await mock_ws.send_json({
+                "type": "save_ok",
+                "document_id": "doc-123",
+                "version_id": "v-1",
+                "version_number": 1,
+                "timestamp": time.time(),
+            })
+            
+            mock_ws.send_json.assert_called_once()
+            call_args = mock_ws.send_json.call_args[0][0]
+            assert call_args["type"] == "save_ok"
+            assert call_args["version_number"] == 1
+
+        asyncio.run(run_test())

@@ -201,7 +201,7 @@ tasks:
   title: 防抖保存与广播同步
   depends_on:
   - RT-01
-  status: waiting
+  status: developing
 - id: LOCK-01
   milestone: M3
   title: 节点锁定机制

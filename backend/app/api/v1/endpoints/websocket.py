@@ -1,6 +1,7 @@
 """WebSocket endpoint for real-time document collaboration.
 
 RT-01: WebSocket 连接管理
+RT-02: 防抖保存与广播同步
 
 Endpoint: /ws/documents/{document_id}
 
@@ -9,6 +10,7 @@ Features:
 - Heartbeat mechanism (ping/pong)
 - User presence tracking
 - Message routing
+- Document save with version tracking
 """
 from __future__ import annotations
 
@@ -29,7 +31,11 @@ from fastapi import (
 
 from app.core.auth_token import decode_jwt
 from app.core.settings import get_settings
-from app.services.document_store import get_document
+from app.services.document_store import (
+    create_document_version,
+    get_document,
+    update_document,
+)
 from app.services.user_store import get_user_by_id
 from app.services.websocket_manager import get_connection_manager
 
@@ -74,6 +80,65 @@ async def get_user_from_token(token: str | None) -> dict[str, str] | None:
     }
 
 
+async def handle_save(
+    document_id: str,
+    content: dict[str, Any],
+    user: dict[str, str],
+    websocket: WebSocket,
+    manager: Any,
+) -> None:
+    """Handle document save request.
+    
+    Saves document content, creates version, and notifies all users.
+    
+    Args:
+        document_id: Document to save
+        content: New document content
+        user: User performing save
+        websocket: WebSocket connection
+        manager: Connection manager
+    """
+    # Update document
+    updated = update_document(document_id, {"content": content})
+    if updated is None:
+        await websocket.send_json({
+            "type": "save_error",
+            "message": "Document not found",
+        })
+        return
+    
+    # Create version
+    version = create_document_version(
+        document_id=document_id,
+        title=updated.get("title", ""),
+        content=content,
+        changed_by=user["id"],
+        summary=f"Saved via WebSocket by {user['display_name']}",
+    )
+    
+    # Send save confirmation to the user who saved
+    await websocket.send_json({
+        "type": "save_ok",
+        "document_id": document_id,
+        "version_id": version.get("id"),
+        "version_number": version.get("version_number"),
+        "timestamp": time.time(),
+    })
+    
+    # Broadcast save notification to other users
+    await manager.broadcast_to_document(
+        document_id,
+        {
+            "type": "document_saved",
+            "user_id": user["id"],
+            "user_name": user["display_name"],
+            "version_number": version.get("version_number"),
+            "timestamp": time.time(),
+        },
+        exclude_user=user["id"],
+    )
+
+
 @router.websocket("/ws/documents/{document_id}")
 async def websocket_endpoint(
     websocket: WebSocket,
@@ -92,15 +157,20 @@ async def websocket_endpoint(
     
     Message types (client -> server):
     - {"type": "ping"} -> Heartbeat request
-    - {"type": "update", "content": {...}} -> Document update
+    - {"type": "update", "content": {...}} -> Document update (broadcast only)
+    - {"type": "save", "content": {...}} -> Document save (persist + broadcast)
     - {"type": "cursor", "node_id": "..."} -> Cursor position
     
     Message types (server -> client):
     - {"type": "pong", "timestamp": ...} -> Heartbeat response
-    - {"type": "user_joined", "user_id": ..., "user_name": ..., "users": [...]}
-    - {"type": "user_left", "user_id": ..., "user_name": ..., "users": [...]}
-    - {"type": "update", "user_id": ..., "content": {...}}
-    - {"type": "error", "message": ...}
+    - {"type": "connected", ...} -> Connection confirmed
+    - {"type": "user_joined", ...} -> User joined notification
+    - {"type": "user_left", ...} -> User left notification
+    - {"type": "update", ...} -> Document update broadcast
+    - {"type": "save_ok", ...} -> Save confirmation (to saver)
+    - {"type": "document_saved", ...} -> Save notification (to others)
+    - {"type": "cursor", ...} -> Cursor position broadcast
+    - {"type": "error", ...} -> Error message
     """
     # Authenticate user
     user = await get_user_from_token(token)
@@ -139,6 +209,7 @@ async def websocket_endpoint(
         "type": "connected",
         "document_id": document_id,
         "users": manager.get_document_users(document_id),
+        "content": document.get("content", {}),
     })
     
     try:
@@ -170,8 +241,12 @@ async def websocket_endpoint(
                         "type": "pong",
                         "timestamp": time.time(),
                     })
+                elif msg_type == "save":
+                    # Document save - persist and broadcast
+                    content = message.get("content", {})
+                    await handle_save(document_id, content, user, websocket, manager)
                 elif msg_type == "update":
-                    # Document update - broadcast to others
+                    # Document update - broadcast to others (no save)
                     content = message.get("content", {})
                     await manager.broadcast_to_document(
                         document_id,

@@ -9,6 +9,7 @@ from app.api.v1.endpoints.projects import router as projects_router
 from app.api.v1.endpoints.shares import router as shares_router
 from app.api.v1.endpoints.system import router as system_router
 from app.api.v1.endpoints.users import router as users_router
+from app.api.v1.endpoints.websocket import router as websocket_router
 from app.api.v1.endpoints.workspace import router as workspace_router
 
 router = APIRouter()
@@ -22,3 +23,4 @@ router.include_router(documents_router, prefix='/documents', tags=['documents'])
 router.include_router(shares_router, tags=['shares'])
 router.include_router(workspace_router, prefix='/workspace', tags=['workspace'])
 router.include_router(projects_router, prefix='/projects', tags=['projects'])
+router.include_router(websocket_router, tags=['websocket'])

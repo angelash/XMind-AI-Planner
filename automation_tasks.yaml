@@ -195,7 +195,7 @@ tasks:
   title: WebSocket 连接管理
   depends_on:
   - DOC-01
-  status: waiting
+  status: developing
 - id: RT-02
   milestone: M3
   title: 防抖保存与广播同步

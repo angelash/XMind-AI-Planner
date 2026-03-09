@@ -123,6 +123,10 @@ function bindEventListeners() {
     } else if (e.key === 'F2') {
       e.preventDefault();
       renameItem(selectedItemId);
+    } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      // Ctrl/Cmd + Enter: Add as node
+      e.preventDefault();
+      addAsNode(selectedItemId);
     }
   });
 }
@@ -628,6 +632,13 @@ export function getSelectedItem() {
   if (!selectedItemId) return null;
   return findItem(fileTreeData, selectedItemId);
 }
+
+/**
+ * Convert file tree item to node (exported for testing)
+ * @param {Object} item - File tree item
+ * @returns {Object} Mind map node
+ */
+export { fileTreeItemToNode };
 
 // Auto-initialize when DOM is ready
 if (document.readyState === 'loading') {

@@ -1,5 +1,6 @@
 import { toMindElixirDocument } from "./nodeModel.js";
 import { setContextNode, clearContextNode } from "./agent.js";
+import { setProject as setMdEditorProject } from "./mdEditor.js";
 
 const mount = document.getElementById("mindmap");
 const fallback = document.getElementById("fallback");

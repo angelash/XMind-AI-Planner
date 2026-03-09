@@ -3,6 +3,8 @@
  * Displays a hierarchical file/folder tree for project workspaces
  */
 
+import { setProject as setMdEditorProject } from "./mdEditor.js";
+
 // State
 let fileTreeData = [];
 let selectedItemId = null;
@@ -622,6 +624,7 @@ export function getCurrentProjectId() {
  */
 export function setProject(projectId) {
   loadFileTree(projectId);
+  setMdEditorProject(projectId);
 }
 
 /**

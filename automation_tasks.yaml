@@ -290,10 +290,10 @@ tasks:
   status: done
 - id: FILE-03
   milestone: M4
-  title: MD 鏂囦欢缂栬緫鍣?
+  title: MD 文件编辑器
   depends_on:
   - FILE-02
-  status: waiting
+  status: developing
 - id: FILE-04
   milestone: M4
   title: 鑴戝浘鍏宠仈鎿嶄綔

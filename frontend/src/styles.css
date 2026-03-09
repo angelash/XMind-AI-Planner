@@ -654,3 +654,194 @@ main {
   background: #e5e7eb;
   margin: 4px 0;
 }
+
+/* MD Editor Panel Styles */
+.md-editor-panel {
+  position: fixed;
+  right: 0;
+  top: 0;
+  width: 500px;
+  max-width: 50vw;
+  height: 100vh;
+  background: #ffffff;
+  border-left: 1px solid #d0d7de;
+  display: flex;
+  flex-direction: column;
+  z-index: 100;
+  box-shadow: -4px 0 12px rgba(0, 0, 0, 0.1);
+}
+
+.md-editor-panel.hidden {
+  display: none;
+}
+
+.md-editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f9fafb;
+}
+
+.md-editor-header h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f2937;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.md-editor-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.md-editor-actions button {
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  color: #374151;
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.md-editor-actions button:hover {
+  background: #f3f4f6;
+}
+
+.md-editor-actions #btn-save-file {
+  background: #0e7490;
+  color: #ffffff;
+  border-color: #0e7490;
+}
+
+.md-editor-actions #btn-save-file:hover {
+  background: #0891b2;
+}
+
+.md-editor-actions #btn-close-editor {
+  border: none;
+  background: transparent;
+  padding: 4px 8px;
+}
+
+.md-editor-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.md-editor-textarea {
+  flex: 1;
+  width: 100%;
+  border: none;
+  padding: 16px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 14px;
+  line-height: 1.6;
+  resize: none;
+  outline: none;
+}
+
+.md-editor-textarea::placeholder {
+  color: #9ca3af;
+}
+
+.md-preview-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  background: #fafafa;
+}
+
+.md-preview-container.hidden {
+  display: none;
+}
+
+.md-preview-container h1 {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0 0 16px 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.md-preview-container h2 {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 24px 0 12px 0;
+}
+
+.md-preview-container h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 20px 0 8px 0;
+}
+
+.md-preview-container p {
+  margin: 0 0 12px 0;
+  line-height: 1.6;
+}
+
+.md-preview-container ul, .md-preview-container ol {
+  margin: 0 0 12px 0;
+  padding-left: 24px;
+}
+
+.md-preview-container li {
+  margin: 4px 0;
+}
+
+.md-preview-container code {
+  background: #f3f4f6;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+}
+
+.md-preview-container pre {
+  background: #1f2937;
+  color: #e5e7eb;
+  padding: 12px 16px;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 12px 0;
+}
+
+.md-preview-container pre code {
+  background: transparent;
+  padding: 0;
+  color: inherit;
+}
+
+.md-preview-container a {
+  color: #0e7490;
+  text-decoration: none;
+}
+
+.md-preview-container a:hover {
+  text-decoration: underline;
+}
+
+.md-preview-container .preview-empty {
+  color: #9ca3af;
+  text-align: center;
+  padding: 40px;
+}
+
+.md-editor-footer {
+  padding: 8px 16px;
+  border-top: 1px solid #e5e7eb;
+  background: #f9fafb;
+}
+
+#md-editor-status {
+  font-size: 12px;
+  color: #6b7280;
+}

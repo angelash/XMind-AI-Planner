@@ -8,6 +8,7 @@ from app.api.v1.endpoints.imports import router as imports_router
 from app.api.v1.endpoints.shares import router as shares_router
 from app.api.v1.endpoints.system import router as system_router
 from app.api.v1.endpoints.users import router as users_router
+from app.api.v1.endpoints.workspace import router as workspace_router
 
 router = APIRouter()
 router.include_router(system_router, prefix='/system', tags=['system'])
@@ -18,3 +19,4 @@ router.include_router(export_router, prefix='/export', tags=['export'])
 router.include_router(imports_router, prefix='/import', tags=['import'])
 router.include_router(documents_router, prefix='/documents', tags=['documents'])
 router.include_router(shares_router, tags=['shares'])
+router.include_router(workspace_router, prefix='/workspace', tags=['workspace'])

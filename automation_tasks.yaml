@@ -257,7 +257,7 @@ tasks:
   title: 自动化任务队列状态机
   depends_on:
   - BOOT-08
-  status: waiting
+  status: done
 - id: AUTO-02
   milestone: M4
   title: need_confirm 规则引擎

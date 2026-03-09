@@ -33,6 +33,7 @@ def _to_item_payload(row: sqlite3.Row) -> dict[str, Any]:
         "name": row["name"],
         "type": row["type"],
         "path": row["path"],
+        "content": row["content"] if "content" in row.keys() else "",
         "sort_order": row["sort_order"],
         "created_at": row["created_at"],
         "updated_at": row["updated_at"],
@@ -47,7 +48,7 @@ def list_file_tree_items(project_id: str, parent_id: str | None = None) -> list[
             # List root items (parent_id is NULL)
             rows = conn.execute(
                 """
-                SELECT id, project_id, parent_id, name, type, path, sort_order,
+                SELECT id, project_id, parent_id, name, type, path, content, sort_order,
                        created_at, updated_at, created_by
                 FROM file_tree_items
                 WHERE project_id = ? AND parent_id IS NULL
@@ -58,7 +59,7 @@ def list_file_tree_items(project_id: str, parent_id: str | None = None) -> list[
         else:
             rows = conn.execute(
                 """
-                SELECT id, project_id, parent_id, name, type, path, sort_order,
+                SELECT id, project_id, parent_id, name, type, path, content, sort_order,
                        created_at, updated_at, created_by
                 FROM file_tree_items
                 WHERE project_id = ? AND parent_id = ?
@@ -74,7 +75,7 @@ def get_file_tree_item(item_id: str) -> dict[str, Any] | None:
     with _connect() as conn:
         row = conn.execute(
             """
-            SELECT id, project_id, parent_id, name, type, path, sort_order,
+            SELECT id, project_id, parent_id, name, type, path, content, sort_order,
                    created_at, updated_at, created_by
             FROM file_tree_items
             WHERE id = ?
@@ -91,7 +92,7 @@ def get_file_tree_item_by_path(project_id: str, path: str) -> dict[str, Any] | N
     with _connect() as conn:
         row = conn.execute(
             """
-            SELECT id, project_id, parent_id, name, type, path, sort_order,
+            SELECT id, project_id, parent_id, name, type, path, content, sort_order,
                    created_at, updated_at, created_by
             FROM file_tree_items
             WHERE project_id = ? AND path = ?
@@ -110,6 +111,7 @@ def create_file_tree_item(
     parent_id: str | None = None,
     created_by: str | None = None,
     sort_order: int = 0,
+    content: str = "",
 ) -> dict[str, Any]:
     """Create a new file or folder in the file tree."""
     if not name or not name.strip():
@@ -143,10 +145,10 @@ def create_file_tree_item(
     with _connect() as conn:
         conn.execute(
             """
-            INSERT INTO file_tree_items(id, project_id, parent_id, name, type, path, sort_order, created_by)
-            VALUES(?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO file_tree_items(id, project_id, parent_id, name, type, path, content, sort_order, created_by)
+            VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (item_id, project_id, parent_id, name, item_type, path, sort_order, created_by),
+            (item_id, project_id, parent_id, name, item_type, path, content, sort_order, created_by),
         )
 
     item = get_file_tree_item(item_id)
@@ -298,7 +300,7 @@ def get_file_tree(project_id: str) -> list[dict[str, Any]]:
     with _connect() as conn:
         rows = conn.execute(
             """
-            SELECT id, project_id, parent_id, name, type, path, sort_order,
+            SELECT id, project_id, parent_id, name, type, path, content, sort_order,
                    created_at, updated_at, created_by
             FROM file_tree_items
             WHERE project_id = ?
@@ -309,6 +311,28 @@ def get_file_tree(project_id: str) -> list[dict[str, Any]]:
 
     items = [_to_item_payload(row) for row in rows]
     return _build_tree(items)
+
+
+def update_file_tree_item_content(item_id: str, content: str) -> dict[str, Any] | None:
+    """Update the content of a file tree item."""
+    item = get_file_tree_item(item_id)
+    if item is None:
+        return None
+    
+    if item["type"] != "file":
+        raise ValueError("can only update content of files, not folders")
+
+    with _connect() as conn:
+        conn.execute(
+            """
+            UPDATE file_tree_items
+            SET content = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+            """,
+            (content, item_id),
+        )
+
+    return get_file_tree_item(item_id)
 
 
 def _build_tree(items: list[dict[str, Any]], parent_id: str | None = None) -> list[dict[str, Any]]:

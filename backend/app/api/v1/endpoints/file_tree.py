@@ -15,6 +15,7 @@ from app.services.file_tree_store import (
     list_file_tree_items,
     move_file_tree_item,
     update_file_tree_item,
+    update_file_tree_item_content,
 )
 from app.services.project_store import get_project, is_project_member
 
@@ -26,6 +27,11 @@ class FileTreeItemCreateRequest(BaseModel):
     type: str = Field(default="folder")
     parent_id: str | None = Field(default=None)
     sort_order: int = Field(default=0)
+    content: str = Field(default="")
+
+
+class FileTreeItemContentUpdateRequest(BaseModel):
+    content: str = Field(default="")
 
 
 class FileTreeItemUpdateRequest(BaseModel):
@@ -100,6 +106,7 @@ def create_project_file_tree_item(
             parent_id=payload.parent_id,
             created_by=user["id"],
             sort_order=payload.sort_order,
+            content=payload.content,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -225,3 +232,37 @@ def move_project_file_tree_item(
         raise HTTPException(status_code=500, detail="failed to move item")
 
     return moved
+
+
+@router.put("/{project_id}/file-tree/items/{item_id}/content")
+def update_file_tree_item_content_endpoint(
+    project_id: str,
+    item_id: str,
+    payload: FileTreeItemContentUpdateRequest,
+    user: CurrentUser,
+) -> dict[str, Any]:
+    """Update the content of a file item."""
+    project = get_project(project_id)
+    if project is None:
+        raise HTTPException(status_code=404, detail="project not found")
+
+    # Only members can update content
+    if user.get("role") != "admin" and not is_project_member(project_id, user["id"]):
+        raise HTTPException(status_code=403, detail="not a project member")
+
+    item = get_file_tree_item(item_id)
+    if item is None:
+        raise HTTPException(status_code=404, detail="item not found")
+
+    if item["project_id"] != project_id:
+        raise HTTPException(status_code=404, detail="item not found in this project")
+
+    try:
+        updated = update_file_tree_item_content(item_id, payload.content)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    if updated is None:
+        raise HTTPException(status_code=500, detail="failed to update content")
+
+    return updated

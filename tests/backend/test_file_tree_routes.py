@@ -345,3 +345,154 @@ def test_list_items_by_parent(monkeypatch, tmp_path: Path) -> None:
         child_items = child_resp.json()['items']
         assert len(child_items) == 1
         assert child_items[0]['name'] == 'child.txt'
+
+
+def test_create_file_with_content(monkeypatch, tmp_path: Path) -> None:
+    """A file can be created with initial content."""
+    _configure_env(monkeypatch, tmp_path)
+
+    with TestClient(app) as client:
+        # Setup
+        client.post('/api/v1/auth/login', json={'staff_no': 'ft11001'})
+        proj_resp = client.post('/api/v1/projects', json={'name': 'Content Test'})
+        proj_id = proj_resp.json()['id']
+
+        # Create file with content
+        file_resp = client.post(f'/api/v1/projects/{proj_id}/file-tree/items', json={
+            'name': 'doc.md',
+            'type': 'file',
+            'content': '# Hello\n\nThis is **markdown** content.',
+        })
+        assert file_resp.status_code == 201
+        file = file_resp.json()
+        assert file['name'] == 'doc.md'
+        assert file['type'] == 'file'
+        assert file['content'] == '# Hello\n\nThis is **markdown** content.'
+
+        # Verify content is persisted
+        get_resp = client.get(f"/api/v1/projects/{proj_id}/file-tree/items/{file['id']}")
+        assert get_resp.status_code == 200
+        assert get_resp.json()['content'] == '# Hello\n\nThis is **markdown** content.'
+
+
+def test_update_file_content(monkeypatch, tmp_path: Path) -> None:
+    """A file's content can be updated via the content endpoint."""
+    _configure_env(monkeypatch, tmp_path)
+
+    with TestClient(app) as client:
+        # Setup
+        client.post('/api/v1/auth/login', json={'staff_no': 'ft12001'})
+        proj_resp = client.post('/api/v1/projects', json={'name': 'Update Content Test'})
+        proj_id = proj_resp.json()['id']
+
+        # Create file without content
+        file_resp = client.post(f'/api/v1/projects/{proj_id}/file-tree/items', json={
+            'name': 'notes.md',
+            'type': 'file',
+        })
+        file_id = file_resp.json()['id']
+        assert file_resp.json()['content'] == ''
+
+        # Update content
+        update_resp = client.put(
+            f'/api/v1/projects/{proj_id}/file-tree/items/{file_id}/content',
+            json={'content': '## Notes\n\n- Item 1\n- Item 2'},
+        )
+        assert update_resp.status_code == 200
+        updated = update_resp.json()
+        assert updated['content'] == '## Notes\n\n- Item 1\n- Item 2'
+        assert updated['id'] == file_id
+
+        # Verify persisted
+        get_resp = client.get(f'/api/v1/projects/{proj_id}/file-tree/items/{file_id}')
+        assert get_resp.json()['content'] == '## Notes\n\n- Item 1\n- Item 2'
+
+
+def test_cannot_update_folder_content(monkeypatch, tmp_path: Path) -> None:
+    """Cannot update content of a folder, only files."""
+    _configure_env(monkeypatch, tmp_path)
+
+    with TestClient(app) as client:
+        # Setup
+        client.post('/api/v1/auth/login', json={'staff_no': 'ft13001'})
+        proj_resp = client.post('/api/v1/projects', json={'name': 'Folder Content Test'})
+        proj_id = proj_resp.json()['id']
+
+        # Create folder
+        folder_resp = client.post(f'/api/v1/projects/{proj_id}/file-tree/items', json={
+            'name': 'MyFolder',
+            'type': 'folder',
+        })
+        folder_id = folder_resp.json()['id']
+
+        # Try to update content
+        update_resp = client.put(
+            f'/api/v1/projects/{proj_id}/file-tree/items/{folder_id}/content',
+            json={'content': 'some content'},
+        )
+        assert update_resp.status_code == 400
+        assert 'file' in update_resp.json()['detail'].lower()
+
+
+def test_non_member_cannot_update_content(monkeypatch, tmp_path: Path) -> None:
+    """Non-members cannot update file content."""
+    _configure_env(monkeypatch, tmp_path)
+
+    with TestClient(app) as client:
+        # User 1 creates project and file
+        client.post('/api/v1/auth/login', json={'staff_no': 'ft14001'})
+        proj_resp = client.post('/api/v1/projects', json={'name': 'Private Content'})
+        proj_id = proj_resp.json()['id']
+        file_resp = client.post(f'/api/v1/projects/{proj_id}/file-tree/items', json={
+            'name': 'secret.md',
+            'type': 'file',
+        })
+        file_id = file_resp.json()['id']
+
+        # User 2 tries to update content
+        client.post('/api/v1/auth/login', json={'staff_no': 'ft14002'})
+        update_resp = client.put(
+            f'/api/v1/projects/{proj_id}/file-tree/items/{file_id}/content',
+            json={'content': 'hacked!'},
+        )
+        assert update_resp.status_code == 403
+
+
+def test_content_in_file_tree(monkeypatch, tmp_path: Path) -> None:
+    """File tree includes content for file items."""
+    _configure_env(monkeypatch, tmp_path)
+
+    with TestClient(app) as client:
+        # Setup
+        client.post('/api/v1/auth/login', json={'staff_no': 'ft15001'})
+        proj_resp = client.post('/api/v1/projects', json={'name': 'Tree Content Test'})
+        proj_id = proj_resp.json()['id']
+
+        # Create folder and file with content
+        folder_resp = client.post(f'/api/v1/projects/{proj_id}/file-tree/items', json={
+            'name': 'docs',
+            'type': 'folder',
+        })
+        folder_id = folder_resp.json()['id']
+
+        client.post(f'/api/v1/projects/{proj_id}/file-tree/items', json={
+            'name': 'readme.md',
+            'type': 'file',
+            'parent_id': folder_id,
+            'content': '# README\n\nDocumentation here.',
+        })
+
+        # Get tree
+        tree_resp = client.get(f'/api/v1/projects/{proj_id}/file-tree')
+        assert tree_resp.status_code == 200
+        tree = tree_resp.json()
+
+        # Verify content is in tree
+        assert len(tree) == 1
+        assert tree[0]['name'] == 'docs'
+        assert tree[0]['type'] == 'folder'
+        assert len(tree[0]['children']) == 1
+        file_item = tree[0]['children'][0]
+        assert file_item['name'] == 'readme.md'
+        assert file_item['type'] == 'file'
+        assert file_item['content'] == '# README\n\nDocumentation here.'

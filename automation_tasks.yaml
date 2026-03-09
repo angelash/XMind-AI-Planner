@@ -214,7 +214,7 @@ tasks:
   depends_on:
   - AUTH-02
   - RT-02
-  status: waiting
+  status: done
 - id: REVIEW-02
   milestone: M3
   title: 审核面板前端

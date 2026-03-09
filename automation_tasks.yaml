@@ -245,7 +245,7 @@ tasks:
   title: SSE 流式响应
   depends_on:
   - AG-02
-  status: waiting
+  status: done
 - id: AG-05
   milestone: M4
   title: 节点 ID 上下文约束

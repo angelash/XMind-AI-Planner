@@ -463,3 +463,181 @@ async def generate_ai_response(
         api_key=api_key,
         timeout=timeout,
     )
+
+
+# ============ AG-04: SSE Streaming Support ============
+
+import asyncio
+from typing import AsyncGenerator
+
+
+@dataclass
+class StreamChunk:
+    """A single chunk from the streaming response."""
+    type: str  # "token", "done", "error"
+    content: str | None = None
+    modifications: list[dict[str, Any]] | None = None
+    error: str | None = None
+
+
+async def call_ai_conversation_stream(
+    messages: list[dict[str, str]],
+    *,
+    model: str = "gpt-4o-mini",
+    max_tokens: int = 2000,
+    temperature: float = 0.7,
+    base_url: str | None = None,
+    api_key: str | None = None,
+    timeout: float = 120.0,
+) -> AsyncGenerator[dict[str, Any], None]:
+    """Call OpenAI-compatible API with streaming support.
+
+    Yields chunks in the format:
+    {"type": "token", "content": "..."} for each token
+    {"type": "done", "content": "...", "modifications": [...]} at the end
+    {"type": "error", "error": "..."} on error
+
+    Args:
+        messages: List of messages in OpenAI format
+        model: Model to use (default: gpt-4o-mini)
+        max_tokens: Maximum tokens in response
+        temperature: Sampling temperature
+        base_url: API base URL (falls back to settings)
+        api_key: API key (falls back to settings)
+        timeout: Request timeout in seconds
+
+    Yields:
+        Dictionary with streaming chunks
+    """
+    from app.core.settings import get_settings
+
+    settings = get_settings()
+    actual_base_url = base_url or settings.openai_base_url
+    actual_api_key = api_key or settings.openai_api_key
+
+    if not actual_api_key:
+        yield {"type": "error", "error": "No API key configured. Set OPENAI_API_KEY environment variable."}
+        return
+
+    url = f"{actual_base_url.rstrip('/')}/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {actual_api_key}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "model": model,
+        "messages": messages,
+        "max_tokens": max_tokens,
+        "temperature": temperature,
+        "stream": True,  # Enable streaming
+    }
+
+    full_content: list[str] = []
+
+    try:
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            async with client.stream("POST", url, json=payload, headers=headers) as response:
+                response.raise_for_status()
+
+                async for line in response.aiter_lines():
+                    if not line:
+                        continue
+
+                    if not line.startswith("data: "):
+                        continue
+
+                    data_str = line[6:]  # Remove "data: " prefix
+
+                    if data_str == "[DONE]":
+                        break
+
+                    try:
+                        data = json.loads(data_str)
+                    except json.JSONDecodeError:
+                        continue
+
+                    choices = data.get("choices", [])
+                    if not choices:
+                        continue
+
+                    delta = choices[0].get("delta", {})
+                    content = delta.get("content", "")
+
+                    if content:
+                        full_content.append(content)
+                        yield {"type": "token", "content": content}
+
+                    # Check for finish_reason
+                    finish_reason = choices[0].get("finish_reason")
+                    if finish_reason:
+                        break
+
+        # Parse the complete response for modifications
+        complete_text = "".join(full_content)
+        parsed = parse_ai_response(complete_text)
+        modifications = format_modifications_for_response(parsed.modifications)
+
+        yield {
+            "type": "done",
+            "content": parsed.text,
+            "modifications": modifications,
+        }
+
+    except httpx.HTTPStatusError as e:
+        yield {
+            "type": "error",
+            "error": f"API error: {e.response.status_code} - {e.response.text[:200]}",
+        }
+    except httpx.TimeoutException:
+        yield {
+            "type": "error",
+            "error": f"API timeout after {timeout} seconds",
+        }
+    except Exception as e:
+        yield {
+            "type": "error",
+            "error": f"Unexpected error: {str(e)}",
+        }
+
+
+async def generate_ai_stream(
+    user_message: str,
+    mindmap: dict[str, Any],
+    context_node_id: str | None = None,
+    history: list[dict[str, str]] | None = None,
+    model: str = "gpt-4o-mini",
+    base_url: str | None = None,
+    api_key: str | None = None,
+    timeout: float = 120.0,
+) -> AsyncGenerator[dict[str, Any], None]:
+    """Convenience function to stream AI response for a conversation.
+
+    This combines build_messages_for_ai and call_ai_conversation_stream.
+
+    Args:
+        user_message: The user's message
+        mindmap: The current mindmap structure
+        context_node_id: Optional context node ID
+        history: Optional conversation history
+        model: Model to use
+        base_url: API base URL (falls back to settings)
+        api_key: API key (falls back to settings)
+        timeout: Request timeout in seconds
+
+    Yields:
+        Dictionary with streaming chunks
+    """
+    messages = build_messages_for_ai(
+        user_message=user_message,
+        mindmap=mindmap,
+        context_node_id=context_node_id,
+        history=history,
+    )
+    async for chunk in call_ai_conversation_stream(
+        messages,
+        model=model,
+        base_url=base_url,
+        api_key=api_key,
+        timeout=timeout,
+    ):
+        yield chunk

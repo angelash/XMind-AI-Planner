@@ -2,12 +2,15 @@
 
 AG-02: 对话模型与 API
 AG-03: Diff + Keep/Undo
+AG-04: SSE 流式响应
 """
 from __future__ import annotations
 
-from typing import Any
+import json
+from typing import Any, AsyncGenerator
 
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from app.api.deps import CurrentUser
@@ -35,6 +38,11 @@ from app.services.modification_applier import (
     batch_apply_modifications,
     batch_revert_modifications,
     get_modification_diff,
+)
+from app.services.conversation_ai import (
+    generate_ai_stream,
+    parse_ai_response,
+    format_modifications_for_response,
 )
 
 router = APIRouter()
@@ -411,3 +419,145 @@ def batch_revert_modifications_endpoint(
     )
 
     return result
+
+
+# ============ AG-04: SSE Streaming Endpoints ============
+
+class StreamRequest(BaseModel):
+    content: str = Field(min_length=1)
+    context_node_id: str | None = None
+
+
+async def sse_generator(
+    conversation_uuid: str,
+    user_content: str,
+    context_node_id: str | None,
+    user_id: str,
+) -> AsyncGenerator[str, None]:
+    """Generate SSE events for streaming AI response.
+
+    Yields SSE-formatted strings.
+    """
+    conversation = get_conversation(conversation_uuid)
+    if conversation is None:
+        yield f"data: {json.dumps({'type': 'error', 'error': 'conversation not found'})}\n\n"
+        return
+
+    # Get document for mindmap context
+    document = get_document(conversation["document_id"])
+    if document is None:
+        yield f"data: {json.dumps({'type': 'error', 'error': 'document not found'})}\n\n"
+        return
+
+    # Get conversation history
+    messages = list_messages(conversation["id"])
+    history = [{"role": m["role"], "content": m["content"]} for m in messages]
+
+    # Update context node if provided
+    if context_node_id is not None:
+        update_conversation(conversation_uuid, {"context_node_id": context_node_id})
+    else:
+        context_node_id = conversation.get("context_node_id")
+
+    # Store user message
+    user_message = create_message(
+        conversation_id=conversation["id"],
+        role="user",
+        content=user_content,
+    )
+
+    # Build mindmap structure
+    mindmap = document.get("content", {"id": "root", "text": "Root"})
+
+    # Stream AI response
+    full_response_text: list[str] = []
+    modifications_data: list[dict[str, Any]] = []
+
+    try:
+        async for chunk in generate_ai_stream(
+            user_message=user_content,
+            mindmap=mindmap,
+            context_node_id=context_node_id,
+            history=history,
+        ):
+            chunk_type = chunk.get("type")
+
+            if chunk_type == "token":
+                content = chunk.get("content", "")
+                full_response_text.append(content)
+                yield f"data: {json.dumps({'type': 'token', 'content': content})}\n\n"
+
+            elif chunk_type == "done":
+                # Store the complete response
+                content = chunk.get("content", "")
+                modifications_data = chunk.get("modifications", [])
+
+                # Store assistant message
+                assistant_message = create_message(
+                    conversation_id=conversation["id"],
+                    role="assistant",
+                    content=content,
+                    metadata={"modifications": len(modifications_data)},
+                )
+
+                # Create modification records
+                for mod in modifications_data:
+                    create_modification(
+                        conversation_id=conversation["id"],
+                        message_id=assistant_message["id"],
+                        node_id=mod.get("node_id"),
+                        modification_type=mod.get("operation"),
+                        before_value={},
+                        after_value={
+                            "new_text": mod.get("new_text"),
+                            "new_memo": mod.get("new_memo"),
+                        } if mod.get("operation") != "delete" else None,
+                    )
+
+                yield f"data: {json.dumps({'type': 'done', 'content': content, 'modifications': modifications_data, 'message_id': assistant_message['id']})}\n\n"
+
+            elif chunk_type == "error":
+                error_msg = chunk.get("error", "Unknown error")
+                yield f"data: {json.dumps({'type': 'error', 'error': error_msg})}\n\n"
+
+    except Exception as e:
+        yield f"data: {json.dumps({'type': 'error', 'error': str(e)})}\n\n"
+
+
+@router.post("/{conversation_uuid}/stream")
+async def stream_ai_response(
+    conversation_uuid: str,
+    payload: StreamRequest,
+    user: CurrentUser,
+) -> StreamingResponse:
+    """Stream AI response for a conversation using Server-Sent Events.
+
+    AG-04: SSE streaming endpoint that:
+    1. Creates user message
+    2. Streams AI response token by token
+    3. Extracts modifications from response
+    4. Creates modification records for user to accept/reject
+    5. Returns final "done" event with complete response and modifications
+
+    SSE Event Types:
+    - token: {"type": "token", "content": "..."} - Each token as it arrives
+    - done: {"type": "done", "content": "...", "modifications": [...], "message_id": N}
+    - error: {"type": "error", "error": "..."}
+
+    The stream automatically stores the user message and creates modification records.
+    Modifications start in "pending" status for user to review.
+    """
+    return StreamingResponse(
+        sse_generator(
+            conversation_uuid=conversation_uuid,
+            user_content=payload.content,
+            context_node_id=payload.context_node_id,
+            user_id=user["id"],
+        ),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",  # Disable nginx buffering
+        },
+    )

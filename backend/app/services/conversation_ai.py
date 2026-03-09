@@ -16,6 +16,8 @@ from dataclasses import dataclass, field
 from typing import Any
 import httpx
 
+from app.services.node_id_constraint import filter_valid_modifications
+
 
 @dataclass
 class NodeModification:
@@ -613,6 +615,7 @@ async def generate_ai_stream(
     """Convenience function to stream AI response for a conversation.
 
     This combines build_messages_for_ai and call_ai_conversation_stream.
+    Also filters modifications based on node ID context constraint (AG-05).
 
     Args:
         user_message: The user's message
@@ -640,4 +643,17 @@ async def generate_ai_stream(
         api_key=api_key,
         timeout=timeout,
     ):
+        # AG-05: Filter modifications to only include valid ones
+        if chunk.get("type") == "done" and chunk.get("modifications"):
+            raw_mods = chunk["modifications"]
+            filtered_mods = filter_valid_modifications(
+                raw_mods,
+                mindmap,
+                context_node_id,
+            )
+            chunk = {
+                **chunk,
+                "modifications": filtered_mods,
+                "filtered_count": len(raw_mods) - len(filtered_mods),
+            }
         yield chunk

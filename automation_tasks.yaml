@@ -220,7 +220,7 @@ tasks:
   title: 审核面板前端
   depends_on:
   - REVIEW-01
-  status: waiting
+  status: developing
 - id: AG-01
   milestone: M4
   title: Agent 面板 UI

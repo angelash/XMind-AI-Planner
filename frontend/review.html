@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Review Panel - XMind AI Planner</title>
+    <link rel="stylesheet" href="./src/styles.css" />
+    <style>
+      .review-container {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+      .review-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+      }
+      .review-actions {
+        display: flex;
+        gap: 8px;
+      }
+      .review-filters {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+      }
+      .review-filters input,
+      .review-filters select {
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        padding: 6px 10px;
+        font-size: 14px;
+      }
+      .review-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .review-item {
+        border: 1px solid #d0d7de;
+        border-radius: 10px;
+        background: #ffffff;
+        padding: 16px;
+      }
+      .review-item-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 12px;
+      }
+      .review-item-meta {
+        font-size: 13px;
+        color: #64748b;
+      }
+      .review-item-type {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+      }
+      .review-item-type.create {
+        background: #dcfce7;
+        color: #166534;
+      }
+      .review-item-type.update {
+        background: #fef3c7;
+        color: #92400e;
+      }
+      .review-item-type.delete {
+        background: #fee2e2;
+        color: #991b1b;
+      }
+      .review-item-content {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+      .review-diff-panel {
+        background: #f8fafc;
+        border-radius: 8px;
+        padding: 12px;
+      }
+      .review-diff-panel h4 {
+        margin: 0 0 8px 0;
+        font-size: 13px;
+        color: #475569;
+      }
+      .review-diff-panel pre {
+        margin: 0;
+        font-size: 12px;
+        white-space: pre-wrap;
+        word-break: break-word;
+        max-height: 200px;
+        overflow-y: auto;
+      }
+      .review-item-actions {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+      }
+      .review-item-actions button {
+        padding: 6px 12px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 13px;
+        border: 1px solid #cbd5e1;
+        background: #ffffff;
+      }
+      .review-item-actions button:hover {
+        background: #f8fafc;
+      }
+      .btn-approve {
+        border-color: #22c55e;
+        color: #166534;
+      }
+      .btn-approve:hover {
+        background: #dcfce7;
+      }
+      .btn-reject {
+        border-color: #ef4444;
+        color: #991b1b;
+      }
+      .btn-reject:hover {
+        background: #fee2e2;
+      }
+      .btn-batch-approve {
+        background: #22c55e;
+        color: #ffffff;
+        border-color: #22c55e;
+      }
+      .btn-batch-approve:hover {
+        background: #16a34a;
+      }
+      .review-comment-input {
+        width: 100%;
+        margin-top: 8px;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        padding: 6px 8px;
+        font-size: 13px;
+        resize: vertical;
+        min-height: 60px;
+      }
+      .review-status {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 500;
+      }
+      .review-status.pending {
+        background: #fef3c7;
+        color: #92400e;
+      }
+      .review-status.approved {
+        background: #dcfce7;
+        color: #166534;
+      }
+      .review-status.rejected {
+        background: #fee2e2;
+        color: #991b1b;
+      }
+      .review-empty {
+        text-align: center;
+        padding: 48px;
+        color: #64748b;
+      }
+      .review-empty-icon {
+        font-size: 48px;
+        margin-bottom: 16px;
+      }
+      .loading {
+        text-align: center;
+        padding: 24px;
+        color: #64748b;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="app-header">
+      <h1>Review Panel</h1>
+      <p>Review and manage pending changes.</p>
+    </header>
+    <main>
+      <div class="review-container">
+        <div class="review-header">
+          <div>
+            <span id="review-count" class="review-status pending">0 pending</span>
+          </div>
+          <div class="review-actions">
+            <button id="btn-refresh" type="button">Refresh</button>
+            <button id="btn-batch-approve" type="button" class="btn-batch-approve">Batch Approve All</button>
+          </div>
+        </div>
+        <div class="review-filters">
+          <input type="text" id="filter-document" placeholder="Filter by document ID..." />
+          <select id="filter-type">
+            <option value="">All Types</option>
+            <option value="create">Create</option>
+            <option value="update">Update</option>
+            <option value="delete">Delete</option>
+          </select>
+        </div>
+        <div id="review-list" class="review-list">
+          <div class="loading">Loading...</div>
+        </div>
+      </div>
+    </main>
+    <script type="module" src="./src/review.js"></script>
+  </body>
+</html>

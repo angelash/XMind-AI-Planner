@@ -233,7 +233,7 @@ tasks:
   depends_on:
   - AG-01
   - BOOT-04
-  status: developing
+  status: done
 - id: AG-03
   milestone: M4
   title: Diff + Keep/Undo

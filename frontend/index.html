@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -12,21 +12,46 @@
       <h1>XMind AI Planner</h1>
       <p>Frontend bootstrap with MindElixir mount point.</p>
     </header>
-    <main>
-      <section class="editor-toolbar" aria-label="Mind map editor toolbar">
-        <button id="btn-add-child" type="button">Add Child</button>
-        <button id="btn-edit-node" type="button">Edit Node</button>
-        <button id="btn-delete-node" type="button">Delete Node</button>
-        <button id="btn-toggle-fold" type="button">Toggle Fold</button>
-        <button id="btn-zoom-in" type="button">Zoom In</button>
-        <button id="btn-zoom-out" type="button">Zoom Out</button>
-        <button id="btn-center" type="button">Center</button>
-        <span id="editor-status" class="editor-status">No node selected</span>
-      </section>
-      <section id="mindmap" class="mindmap-canvas"></section>
-      <pre id="fallback" class="fallback hidden"></pre>
-    </main>
+    <div class="editor-layout">
+      <main class="editor-main">
+        <section class="editor-toolbar" aria-label="Mind map editor toolbar">
+          <button id="btn-add-child" type="button">Add Child</button>
+          <button id="btn-edit-node" type="button">Edit Node</button>
+          <button id="btn-delete-node" type="button">Delete Node</button>
+          <button id="btn-toggle-fold" type="button">Toggle Fold</button>
+          <button id="btn-zoom-in" type="button">Zoom In</button>
+          <button id="btn-zoom-out" type="button">Zoom Out</button>
+          <button id="btn-center" type="button">Center</button>
+          <span id="editor-status" class="editor-status">No node selected</span>
+          <button id="btn-agent-toggle" type="button">AI Assistant</button>
+        </section>
+        <section id="mindmap" class="mindmap-canvas"></section>
+        <pre id="fallback" class="fallback hidden"></pre>
+      </main>
+      <aside id="agent-panel" class="agent-panel">
+        <div id="agent-resize-handle" class="agent-resize-handle"></div>
+        <div id="agent-header" class="agent-panel-header">
+          <h2 id="agent-title">AI 助手</h2>
+          <div class="agent-header-actions">
+            <button id="btn-agent-new" type="button" title="New conversation">+ New</button>
+            <button id="btn-agent-history" type="button" title="Conversation history">History</button>
+          </div>
+        </div>
+        <div id="agent-messages" class="agent-messages"></div>
+        <div id="agent-operation-bar" class="agent-operation-bar hidden">
+          <span id="agent-pending-count">0 changes</span>
+          <div class="agent-operation-actions">
+            <button id="btn-agent-undo-all" type="button">Undo All</button>
+            <button id="btn-agent-keep-all" type="button">Keep All</button>
+          </div>
+        </div>
+        <div class="agent-input-area">
+          <div id="agent-context-tags" class="agent-context-tags"></div>
+          <textarea id="agent-input" class="agent-input" placeholder="Type a message... (Enter to send, Shift+Enter for new line)" rows="3"></textarea>
+        </div>
+      </aside>
+    </div>
     <script type="module" src="./src/main.js"></script>
+    <script type="module" src="./src/agent.js"></script>
   </body>
 </html>
-

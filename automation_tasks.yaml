@@ -226,7 +226,7 @@ tasks:
   title: Agent 面板 UI
   depends_on:
   - CORE-02
-  status: waiting
+  status: developing
 - id: AG-02
   milestone: M4
   title: 对话模型与 API

@@ -2,6 +2,7 @@
 
 RT-01: WebSocket 连接管理
 RT-02: 防抖保存与广播同步
+LOCK-01: 节点锁定机制
 
 Endpoint: /ws/documents/{document_id}
 
@@ -11,6 +12,13 @@ Features:
 - User presence tracking
 - Message routing
 - Document save with version tracking
+- Node locking for collaborative editing
+
+Lock Feature (LOCK-01):
+- Lock nodes on selection to prevent concurrent edits
+- Broadcast lock state changes to all users
+- Auto-release after 5 minutes of inactivity
+- Release on deselection or disconnect
 """
 from __future__ import annotations
 
@@ -36,6 +44,7 @@ from app.services.document_store import (
     get_document,
     update_document,
 )
+from app.services.lock_manager import get_lock_manager
 from app.services.user_store import get_user_by_id
 from app.services.websocket_manager import get_connection_manager
 
@@ -150,16 +159,19 @@ async def websocket_endpoint(
     Connection flow:
     1. Client connects with document_id and JWT token (query param)
     2. Server validates token and document access
-    3. Server sends initial state (user list)
+    3. Server sends initial state (user list, locks, content)
     4. Client/server exchange messages
     5. Server sends heartbeat every 30 seconds
-    6. On disconnect, server notifies other users
+    6. On disconnect, server notifies other users and releases locks
     
     Message types (client -> server):
     - {"type": "ping"} -> Heartbeat request
     - {"type": "update", "content": {...}} -> Document update (broadcast only)
     - {"type": "save", "content": {...}} -> Document save (persist + broadcast)
     - {"type": "cursor", "node_id": "..."} -> Cursor position
+    - {"type": "lock_node", "node_id": "..."} -> Request node lock
+    - {"type": "unlock_node", "node_id": "..."} -> Release node lock
+    - {"type": "get_locks"} -> Get all locks for document
     
     Message types (server -> client):
     - {"type": "pong", "timestamp": ...} -> Heartbeat response
@@ -170,6 +182,10 @@ async def websocket_endpoint(
     - {"type": "save_ok", ...} -> Save confirmation (to saver)
     - {"type": "document_saved", ...} -> Save notification (to others)
     - {"type": "cursor", ...} -> Cursor position broadcast
+    - {"type": "node_locked", ...} -> Node locked notification
+    - {"type": "node_unlocked", ...} -> Node unlocked notification
+    - {"type": "lock_result", ...} -> Lock operation result
+    - {"type": "locks", ...} -> Current locks for document
     - {"type": "error", ...} -> Error message
     """
     # Authenticate user
@@ -202,6 +218,7 @@ async def websocket_endpoint(
     
     # Register connection
     manager = get_connection_manager()
+    lock_manager = get_lock_manager()
     await manager.connect(websocket, document_id, user["id"], user["display_name"])
     
     # Send initial state
@@ -209,6 +226,7 @@ async def websocket_endpoint(
         "type": "connected",
         "document_id": document_id,
         "users": manager.get_document_users(document_id),
+        "locks": lock_manager.get_document_locks(document_id),
         "content": document.get("content", {}),
     })
     
@@ -273,6 +291,45 @@ async def websocket_endpoint(
                             },
                             exclude_user=user["id"],
                         )
+                elif msg_type == "lock_node":
+                    # Lock a node for editing
+                    node_id = message.get("node_id")
+                    if node_id:
+                        result = await lock_manager.lock_node(
+                            document_id=document_id,
+                            node_id=node_id,
+                            user_id=user["id"],
+                            user_name=user["display_name"],
+                        )
+                        await websocket.send_json({
+                            "type": "lock_result",
+                            "success": result["success"],
+                            "node_id": node_id,
+                            **result,
+                        })
+                elif msg_type == "unlock_node":
+                    # Unlock a node
+                    node_id = message.get("node_id")
+                    if node_id:
+                        result = await lock_manager.unlock_node(
+                            document_id=document_id,
+                            node_id=node_id,
+                            user_id=user["id"],
+                        )
+                        await websocket.send_json({
+                            "type": "lock_result",
+                            "success": result["success"],
+                            "node_id": node_id,
+                            **result,
+                        })
+                elif msg_type == "get_locks":
+                    # Get all locks for the document
+                    locks = lock_manager.get_document_locks(document_id)
+                    await websocket.send_json({
+                        "type": "locks",
+                        "document_id": document_id,
+                        "locks": locks,
+                    })
                 else:
                     # Unknown message type
                     await websocket.send_json({
@@ -295,4 +352,7 @@ async def websocket_endpoint(
     finally:
         # Clean up connection
         manager.disconnect(websocket, document_id)
+        # Release all locks held by this user
+        released = await lock_manager.release_user_locks(document_id, user["id"])
+        # Notify other users
         await manager.broadcast_user_left(document_id, user["id"], user["display_name"])

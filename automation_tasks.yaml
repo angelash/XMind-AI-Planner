@@ -207,7 +207,7 @@ tasks:
   title: 节点锁定机制
   depends_on:
   - RT-02
-  status: waiting
+  status: done
 - id: REVIEW-01
   milestone: M3
   title: 审核流程后端

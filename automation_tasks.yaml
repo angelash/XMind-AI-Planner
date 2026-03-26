@@ -341,7 +341,7 @@ tasks:
   title: OT/CRDT 鍐茬獊澶勭悊
   depends_on:
   - GAP-06
-  status: waiting
+  status: developing
 - id: GAP-08
   milestone: M5
   title: 妯℃澘搴?

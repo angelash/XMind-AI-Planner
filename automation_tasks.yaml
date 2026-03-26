@@ -317,7 +317,7 @@ tasks:
   title: JSON 手动保存/加载
   depends_on:
   - DOC-01
-  status: waiting
+  status: done
 - id: GAP-04
   milestone: M5
   title: XMind 导出

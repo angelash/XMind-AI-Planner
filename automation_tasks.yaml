@@ -311,7 +311,7 @@ tasks:
   title: 节点拖拽排序
   depends_on:
   - CORE-02
-  status: developing
+  status: done
 - id: GAP-03
   milestone: M5
   title: JSON 手动保存/加载

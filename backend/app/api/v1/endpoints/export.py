@@ -7,6 +7,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from app.api.deps import CurrentUser
+from app.services.image_export import render_png, render_svg
 from app.services.markdown_export import render_markdown
 from app.services.word_export import render_docx
 from app.services.xmind_export import render_xmind
@@ -48,4 +49,28 @@ def export_xmind(payload: MarkdownExportRequest, _user: CurrentUser) -> dict[str
     return {
         "filename": "mindmap.xmind",
         "xmind_base64": base64.b64encode(xmind_bytes).decode("ascii"),
+    }
+
+
+@router.post('/svg')
+def export_svg(payload: MarkdownExportRequest, _user: CurrentUser) -> dict[str, str]:
+    try:
+        svg_content = render_svg(payload.root)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {
+        "filename": "mindmap.svg",
+        "svg_content": svg_content,
+    }
+
+
+@router.post('/png')
+def export_png(payload: MarkdownExportRequest, _user: CurrentUser) -> dict[str, str]:
+    try:
+        png_bytes = render_png(payload.root)
+    except (ValueError, ImportError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {
+        "filename": "mindmap.png",
+        "png_base64": base64.b64encode(png_bytes).decode("ascii"),
     }

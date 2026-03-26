@@ -323,7 +323,7 @@ tasks:
   title: XMind 导出
   depends_on:
   - CORE-01
-  status: waiting
+  status: done
 - id: GAP-05
   milestone: M5
   title: PNG/SVG 导出

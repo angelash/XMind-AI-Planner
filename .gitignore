@@ -12,3 +12,9 @@ DEV_GUARD.log
 
 # supervisor logs
 logs/
+
+# SQLite databases
+data/*.db
+data/*.db-journal
+data/*.db-shm
+data/*.db-wal

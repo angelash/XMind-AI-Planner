@@ -136,6 +136,64 @@
     toCenter() {
       return;
     }
+
+    /**
+     * Move a node to a new parent and position
+     * @param {Object} targetNode - Node to move
+     * @param {Object} newParentNode - New parent node
+     * @param {number} newIndex - Index in new parent's children array
+     * @returns {boolean} - True if successful
+     */
+    moveNode(targetNode, newParentNode, newIndex) {
+      if (!this.nodeData || !targetNode || !newParentNode) {
+        return false;
+      }
+      if (targetNode.root) {
+        console.warn("Cannot move root node");
+        return false;
+      }
+
+      let oldParent = null;
+      let oldIndex = -1;
+
+      // Find old parent and index
+      walk(this.nodeData, (node, parent) => {
+        if (!parent || !Array.isArray(parent.children)) {
+          return false;
+        }
+        const idx = parent.children.findIndex((child) => child.id === node.id);
+        if (idx >= 0 && node.id === targetNode.id) {
+          oldParent = parent;
+          oldIndex = idx;
+          return true;
+        }
+        return false;
+      });
+
+      if (!oldParent || oldIndex < 0) {
+        console.warn("Could not find original parent");
+        return false;
+      }
+
+      // Remove from old parent
+      oldParent.children.splice(oldIndex, 1);
+
+      // Add to new parent at specified index
+      newParentNode.children = newParentNode.children || [];
+      const finalIndex = Math.min(Math.max(0, newIndex), newParentNode.children.length);
+      newParentNode.children.splice(finalIndex, 0, targetNode);
+
+      this.refresh();
+      this.bus.emit("afterNodeMove", {
+        targetNode,
+        oldParent,
+        oldIndex,
+        newParent: newParentNode,
+        newIndex: finalIndex,
+      });
+
+      return true;
+    }
   }
 
   global.MindElixir = MindElixir;

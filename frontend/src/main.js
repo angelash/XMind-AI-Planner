@@ -18,6 +18,7 @@ const controls = {
   editNode: document.getElementById("btn-edit-node"),
   deleteNode: document.getElementById("btn-delete-node"),
   toggleFold: document.getElementById("btn-toggle-fold"),
+  moveNode: document.getElementById("btn-move-node"),
   zoomIn: document.getElementById("btn-zoom-in"),
   zoomOut: document.getElementById("btn-zoom-out"),
   center: document.getElementById("btn-center"),
@@ -240,6 +241,138 @@ function toggleFold() {
   }
 }
 
+function moveNode() {
+  const targetNode = getActiveNode();
+  if (!targetNode) {
+    setStatus("Cannot move: no active node");
+    return;
+  }
+  if (targetNode.root) {
+    setStatus("Root node cannot be moved");
+    return;
+  }
+
+  // Find current parent
+  let oldParent = null;
+  let oldIndex = -1;
+  if (mind && mind.nodeData) {
+    const findParent = (current, target, p) => {
+      if (!current || !current.children) return false;
+      for (let i = 0; i < current.children.length; i++) {
+        if (current.children[i] === target) {
+          oldParent = current;
+          oldIndex = i;
+          return true;
+        }
+        if (findParent(current.children[i], target, current.children[i])) {
+          return true;
+        }
+      }
+      return false;
+    };
+    findParent(mind.nodeData, targetNode, null);
+  }
+
+  if (!oldParent) {
+    setStatus("Could not find parent node");
+    return;
+  }
+
+  // Get target node ID to move to (simplified: prompt for sibling/cross-parent)
+  const moveType = window.prompt(
+    "Move type:\n1. Reorder in current parent (sibling)\n2. Move to different parent (cross-parent)\nEnter 1 or 2:",
+    "1"
+  );
+
+  let newParentNode = null;
+  let newIndex = 0;
+
+  if (moveType === "1") {
+    // Sibling reordering
+    const newIndexInput = window.prompt(
+      `Current position: ${oldIndex}\nEnter new index (0-${oldParent.children.length - 1}):`,
+      String(oldIndex)
+    );
+    newIndex = parseInt(newIndexInput, 10);
+
+    if (isNaN(newIndex) || newIndex === oldIndex) {
+      setStatus("Move cancelled");
+      return;
+    }
+
+    newParentNode = oldParent;
+  } else if (moveType === "2") {
+    // Cross-parent move - find target parent
+    const targetParentId = window.prompt("Enter target parent node ID:");
+    if (!targetParentId) {
+      setStatus("Move cancelled");
+      return;
+    }
+
+    let found = false;
+    const findTargetParent = (current) => {
+      if (!current) return false;
+      if (current.id === targetParentId && current !== targetNode) {
+        newParentNode = current;
+        return true;
+      }
+      if (current.children) {
+        for (const child of current.children) {
+          if (findTargetParent(child)) {
+            return true;
+          }
+        }
+      }
+      return false;
+    };
+    findTargetParent(mind.nodeData);
+
+    if (!newParentNode) {
+      setStatus("Target parent not found");
+      return;
+    }
+
+    const newIndexInput = window.prompt(
+      `Enter new index (0-${newParentNode.children?.length || 0}):`,
+      "0"
+    );
+    newIndex = parseInt(newIndexInput, 10);
+
+    if (isNaN(newIndex)) {
+      newIndex = 0;
+    }
+  } else {
+    setStatus("Invalid move type");
+    return;
+  }
+
+  // Execute the move
+  if (typeof mind.moveNode === "function") {
+    const success = mind.moveNode(targetNode, newParentNode, newIndex);
+    if (success) {
+      // Create and execute history command
+      const command = createCommand(CommandType.MOVE_NODE, {
+        targetNode,
+        oldParent,
+        oldIndex,
+        newParent: newParentNode,
+        newIndex,
+      });
+      if (command) {
+        executeCommand(command);
+      }
+
+      setStatus(
+        `Moved "${targetNode.topic || targetNode.id}" to index ${newIndex}`
+      );
+    } else {
+      setStatus("Move failed");
+    }
+  } else {
+    setStatus("Move is not available in current MindElixir build");
+  }
+}
+
 function zoom(delta) {
   if (!mind || typeof mind.scale !== "function") {
     setStatus("Zoom is not available in current MindElixir build");
@@ -262,6 +395,7 @@ function bindControls() {
   controls.editNode?.addEventListener("click", editNodeText);
   controls.deleteNode?.addEventListener("click", deleteNode);
   controls.toggleFold?.addEventListener("click", toggleFold);
+  controls.moveNode?.addEventListener("click", moveNode);
   controls.zoomIn?.addEventListener("click", () => zoom(0.1));
   controls.zoomOut?.addEventListener("click", () => zoom(-0.1));
   controls.center?.addEventListener("click", centerCanvas);

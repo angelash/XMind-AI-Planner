@@ -23,6 +23,7 @@ export const CommandType = {
   EDIT_NODE: "editNode",
   DELETE_NODE: "deleteNode",
   UPDATE_NODE_TOPIC: "updateNodeTopic",
+  MOVE_NODE: "moveNode",
 };
 
 /**
@@ -51,6 +52,8 @@ export function createCommand(type, data) {
       return createDeleteNodeCommand(data);
     case CommandType.UPDATE_NODE_TOPIC:
       return createUpdateNodeTopicCommand(data);
+    case CommandType.MOVE_NODE:
+      return createMoveNodeCommand(data);
     default:
       console.warn(`Unknown command type: ${type}`);
       return null;
@@ -158,6 +161,59 @@ function createDeleteNodeCommand(data) {
           if (mindInstance && typeof mindInstance.refresh === "function") {
             mindInstance.refresh();
           }
+        }
+      }
+    },
+  };
+}
+
+/**
+ * Create move node command
+ */
+function createMoveNodeCommand(data) {
+  const { targetNode, oldParent, oldIndex, newParent, newIndex } = data;
+  return {
+    type: CommandType.MOVE_NODE,
+    description: `Move node "${targetNode?.topic || targetNode?.id}"`,
+    data: { targetNode, oldParent, oldIndex, newParent, newIndex },
+    execute: () => {
+      // Already executed when command is created
+    },
+    undo: () => {
+      // Move node back to original parent and position
+      if (mindInstance && targetNode && oldParent && newParent) {
+        // Remove from current parent
+        const currentIdx = newParent.children?.findIndex((c) => c.id === targetNode.id);
+        if (currentIdx !== undefined && currentIdx >= 0) {
+          newParent.children.splice(currentIdx, 1);
+        }
+
+        // Restore to old parent
+        oldParent.children = oldParent.children || [];
+        oldParent.children.splice(oldIndex, 0, targetNode);
+
+        if (typeof mindInstance.refresh === "function") {
+          mindInstance.refresh();
+        }
+      }
+    },
+    redo: () => {
+      // Move node again to new parent and position
+      if (mindInstance && targetNode && oldParent && newParent) {
+        // Remove from old parent
+        oldParent.children = oldParent.children || [];
+        const oldIdx = oldParent.children.findIndex((c) => c.id === targetNode.id);
+        if (oldIdx >= 0) {
+          oldParent.children.splice(oldIdx, 1);
+        }
+
+        // Add to new parent
+        newParent.children = newParent.children || [];
+        const finalIndex = Math.min(Math.max(0, newIndex), newParent.children.length);
+        newParent.children.splice(finalIndex, 0, targetNode);
+
+        if (typeof mindInstance.refresh === "function") {
+          mindInstance.refresh();
         }
       }
     },

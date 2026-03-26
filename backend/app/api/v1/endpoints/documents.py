@@ -54,6 +54,10 @@ class BindLinkRequest(BaseModel):
     linked_doc_id: str = Field(min_length=1)
 
 
+class JsonImportRequest(BaseModel):
+    content: dict[str, Any] = Field(description="Document content to import")
+
+
 @router.get('')
 def list_document_items(
     user: CurrentUser,
@@ -259,6 +263,53 @@ def bind_document_link(document_id: str, payload: BindLinkRequest, user: Current
     if result is None:
         raise HTTPException(status_code=404, detail='node not found')
     return result
+
+
+@router.get('/{document_id}/export/json')
+def export_document_json(document_id: str, user: CurrentUser) -> dict[str, Any]:
+    """Export document content as JSON."""
+    document = get_document(document_id)
+    if document is None:
+        raise HTTPException(status_code=404, detail='document not found')
+
+    # Check access
+    is_admin = user['role'] in {'admin', 'reviewer'}
+    is_owner = document.get('owner_id') == user['id']
+    if not is_admin and not is_owner:
+        raise HTTPException(status_code=404, detail='document not found')
+
+    # Return document content as downloadable JSON
+    return {
+        'document_id': document['id'],
+        'title': document['title'],
+        'content': document.get('content', {}),
+        'exported_at': document.get('updated_at', document.get('created_at'))
+    }
+
+
+@router.post('/{document_id}/import/json')
+def import_document_json(document_id: str, payload: JsonImportRequest, user: CurrentUser) -> dict[str, Any]:
+    """Import JSON content to replace document content."""
+    document = get_document(document_id)
+    if document is None:
+        raise HTTPException(status_code=404, detail='document not found')
+
+    # Check access
+    is_admin = user['role'] in {'admin', 'reviewer'}
+    is_owner = document.get('owner_id') == user['id']
+    if not is_admin and not is_owner:
+        raise HTTPException(status_code=404, detail='document not found')
+
+    # Validate content structure
+    if not isinstance(payload.content, dict):
+        raise HTTPException(status_code=400, detail='content must be a JSON object')
+
+    # Update document with new content
+    updated = update_document(document_id, {'content': payload.content})
+    if updated is None:
+        raise HTTPException(status_code=404, detail='document not found')
+
+    return updated
 
 
 # Mount versions under /{document_id}/versions

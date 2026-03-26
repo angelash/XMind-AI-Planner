@@ -257,3 +257,217 @@ def test_admin_can_move_any_document(monkeypatch, tmp_path: Path) -> None:
         move_resp = tc.post(f'/api/v1/documents/{doc_id}/move', json={'project_id': project_id})
         assert move_resp.status_code == 200
         assert move_resp.json()['project_id'] == project_id
+
+
+def test_json_export_document(monkeypatch, tmp_path: Path) -> None:
+    """Test exporting document as JSON."""
+    _configure_temp_db(monkeypatch, tmp_path)
+    _login_admin()
+
+    # Create a document with complex content
+    create_resp = client.post(
+        '/api/v1/documents',
+        json={
+            'title': 'Test Mindmap',
+            'content': {
+                'id': 'root',
+                'text': 'Main Topic',
+                'children': [
+                    {'id': 'c1', 'text': 'Child 1'},
+                    {'id': 'c2', 'text': 'Child 2'},
+                ]
+            },
+            'owner_id': 'u-1',
+        },
+    )
+    assert create_resp.status_code == 201
+    doc_id = create_resp.json()['id']
+
+    # Export as JSON
+    export_resp = client.get(f'/api/v1/documents/{doc_id}/export/json')
+    assert export_resp.status_code == 200
+    exported = export_resp.json()
+
+    # Verify exported structure
+    assert 'document_id' in exported
+    assert 'title' in exported
+    assert 'content' in exported
+    assert 'exported_at' in exported
+    assert exported['document_id'] == doc_id
+    assert exported['title'] == 'Test Mindmap'
+    assert exported['content']['id'] == 'root'
+    assert len(exported['content']['children']) == 2
+
+
+def test_json_import_document(monkeypatch, tmp_path: Path) -> None:
+    """Test importing JSON content to document."""
+    _configure_temp_db(monkeypatch, tmp_path)
+    _login_admin()
+
+    # Create a document with initial content
+    create_resp = client.post(
+        '/api/v1/documents',
+        json={
+            'title': 'Import Test',
+            'content': {'id': 'root', 'text': 'Original'},
+            'owner_id': 'u-1',
+        },
+    )
+    assert create_resp.status_code == 201
+    doc_id = create_resp.json()['id']
+
+    # Import new JSON content
+    new_content = {
+        'id': 'root',
+        'text': 'Imported Topic',
+        'children': [
+            {'id': 'n1', 'text': 'New Child 1'},
+            {'id': 'n2', 'text': 'New Child 2', 'children': [{'id': 'n2-1', 'text': 'Nested'}]},
+        ]
+    }
+
+    import_resp = client.post(
+        f'/api/v1/documents/{doc_id}/import/json',
+        json={'content': new_content},
+    )
+    assert import_resp.status_code == 200
+    updated = import_resp.json()
+
+    # Verify content was updated
+    assert updated['content']['text'] == 'Imported Topic'
+    assert len(updated['content']['children']) == 2
+    assert updated['content']['children'][1]['children'][0]['text'] == 'Nested'
+
+    # Verify persisted by fetching again
+    get_resp = client.get(f'/api/v1/documents/{doc_id}')
+    assert get_resp.status_code == 200
+    fetched = get_resp.json()
+    assert fetched['content']['text'] == 'Imported Topic'
+
+
+def test_json_import_validates_content_type(monkeypatch, tmp_path: Path) -> None:
+    """Test JSON import validates content is an object."""
+    _configure_temp_db(monkeypatch, tmp_path)
+    _login_admin()
+
+    # Create document
+    create_resp = client.post(
+        '/api/v1/documents',
+        json={'title': 'Validation Test', 'content': {'id': 'root'}},
+    )
+    doc_id = create_resp.json()['id']
+
+    # Try to import with invalid content (array instead of object)
+    import_resp = client.post(
+        f'/api/v1/documents/{doc_id}/import/json',
+        json={'content': ['invalid', 'array']},
+    )
+    assert import_resp.status_code in {400, 422}  # 400 from our validation, 422 from Pydantic
+
+    # Try to import with invalid content (string instead of object)
+    import_resp = client.post(
+        f'/api/v1/documents/{doc_id}/import/json',
+        json={'content': 'invalid string'},
+    )
+    assert import_resp.status_code in {400, 422}
+
+
+
+def test_json_export_requires_access(monkeypatch, tmp_path: Path) -> None:
+    """Test JSON export requires document access."""
+    _configure_temp_db(monkeypatch, tmp_path)
+
+    with TestClient(app) as tc:
+        # User 1 creates a document
+        tc.post('/api/v1/auth/login', json={'staff_no': 'p8001'})
+        doc_resp = tc.post('/api/v1/documents', json={'title': 'Private Doc', 'content': {'id': 'root'}})
+        doc_id = doc_resp.json()['id']
+
+        # User 2 tries to export (should fail)
+        tc.post('/api/v1/auth/login', json={'staff_no': 'p8002'})
+        export_resp = tc.get(f'/api/v1/documents/{doc_id}/export/json')
+        assert export_resp.status_code == 404
+
+
+def test_json_import_requires_access(monkeypatch, tmp_path: Path) -> None:
+    """Test JSON import requires document access."""
+    _configure_temp_db(monkeypatch, tmp_path)
+
+    with TestClient(app) as tc:
+        # User 1 creates a document
+        tc.post('/api/v1/auth/login', json={'staff_no': 'p9001'})
+        doc_resp = tc.post('/api/v1/documents', json={'title': 'Private Doc', 'content': {'id': 'root'}})
+        doc_id = doc_resp.json()['id']
+
+        # User 2 tries to import (should fail)
+        tc.post('/api/v1/auth/login', json={'staff_no': 'p9002'})
+        import_resp = tc.post(
+            f'/api/v1/documents/{doc_id}/import/json',
+            json={'content': {'id': 'root', 'text': 'Hacked'}},
+        )
+        assert import_resp.status_code == 404
+
+
+def test_json_roundtrip(monkeypatch, tmp_path: Path) -> None:
+    """Test that exported JSON can be imported back without data loss."""
+    _configure_temp_db(monkeypatch, tmp_path)
+    _login_admin()
+
+    # Create a document with rich content
+    original_content = {
+        'id': 'root',
+        'text': 'Main Topic',
+        'root': True,
+        'direction': 0,
+        'children': [
+            {
+                'id': 'c1',
+                'text': 'Branch 1',
+                'note': 'This is a note',
+                'hyperlink': 'https://example.com',
+                'children': [
+                    {'id': 'c1-1', 'text': 'Leaf'},
+                ]
+            },
+            {
+                'id': 'c2',
+                'text': 'Branch 2',
+                'style': {'color': '#FF0000', 'fontSize': 16},
+            },
+        ],
+        'topic': {
+            'id': 'root',
+            'text': 'Main Topic',
+        }
+    }
+
+    create_resp = client.post(
+        '/api/v1/documents',
+        json={
+            'title': 'Roundtrip Test',
+            'content': original_content,
+        },
+    )
+    doc_id = create_resp.json()['id']
+
+    # Export
+    export_resp = client.get(f'/api/v1/documents/{doc_id}/export/json')
+    assert export_resp.status_code == 200
+    exported = export_resp.json()
+
+    # Create a new document and import the exported content
+    create_resp2 = client.post('/api/v1/documents', json={'title': 'Imported Doc'})
+    doc_id2 = create_resp2.json()['id']
+
+    import_resp = client.post(
+        f'/api/v1/documents/{doc_id2}/import/json',
+        json={'content': exported['content']},
+    )
+    assert import_resp.status_code == 200
+
+    # Verify content matches original
+    get_resp = client.get(f'/api/v1/documents/{doc_id2}')
+    assert get_resp.status_code == 200
+    imported_content = get_resp.json()['content']
+    assert imported_content == original_content
+

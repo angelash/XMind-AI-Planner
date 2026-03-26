@@ -3,6 +3,7 @@
 RT-01: WebSocket 连接管理
 RT-02: 防抖保存与广播同步
 LOCK-01: 节点锁定机制
+GAP-06: 云端同步
 
 Endpoint: /ws/documents/{document_id}
 
@@ -13,12 +14,19 @@ Features:
 - Message routing
 - Document save with version tracking
 - Node locking for collaborative editing
+- Cloud sync with conflict detection and LWW resolution
 
 Lock Feature (LOCK-01):
 - Lock nodes on selection to prevent concurrent edits
 - Broadcast lock state changes to all users
 - Auto-release after 5 minutes of inactivity
 - Release on deselection or disconnect
+
+Cloud Sync Feature (GAP-06):
+- Detects conflicts when multiple users edit same node simultaneously
+- Last-Write-Wins (LWW) conflict resolution
+- Notifies users when their changes are overwritten
+- Tracks change history for conflict resolution
 """
 from __future__ import annotations
 
@@ -45,6 +53,7 @@ from app.services.document_store import (
     update_document,
 )
 from app.services.lock_manager import get_lock_manager
+from app.services.sync_manager import get_sync_manager
 from app.services.user_store import get_user_by_id
 from app.services.websocket_manager import get_connection_manager
 
@@ -96,9 +105,12 @@ async def handle_save(
     websocket: WebSocket,
     manager: Any,
 ) -> None:
-    """Handle document save request.
+    """Handle document save request with cloud sync conflict resolution.
     
-    Saves document content, creates version, and notifies all users.
+    Saves document content, detects conflicts, resolves with LWW,
+    creates version, and notifies all users.
+    
+    GAP-06: 云端同步 - Conflict detection and LWW resolution
     
     Args:
         document_id: Document to save
@@ -107,12 +119,49 @@ async def handle_save(
         websocket: WebSocket connection
         manager: Connection manager
     """
+    sync_manager = get_sync_manager()
+    
+    # Get current document to detect changes
+    doc = get_document(document_id)
+    if doc is None:
+        await websocket.send_json({
+            "type": "save_error",
+            "message": "Document not found",
+        })
+        return
+    
+    old_content = doc.get("content", {})
+    
+    # Extract modified nodes from content diff
+    modified_nodes = _extract_modified_nodes(old_content, content)
+    
+    # Check for conflicts on modified nodes
+    conflict_notifications = []
+    for node_id, node_content in modified_nodes.items():
+        conflict = sync_manager.detect_conflict(
+            document_id, node_id, user["id"], user["display_name"]
+        )
+        if conflict:
+            # Resolve conflict with LWW
+            resolved_content, notification = sync_manager.resolve_conflict_lww(
+                conflict, document_id, node_content, user["id"], user["display_name"]
+            )
+            # Update the content with the winning version
+            content = _update_node_in_content(content, node_id, resolved_content)
+            conflict_notifications.append(notification)
+        else:
+            # Record the change
+            sync_manager.record_change(
+                document_id, node_id, user["id"], user["display_name"],
+                None, node_content
+            )
+    
     # Update document
     updated = update_document(document_id, {"content": content})
     if updated is None:
         await websocket.send_json({
             "type": "save_error",
-            "message": "Document not found",
+            "message": "Failed to update document",
         })
         return
     
@@ -132,6 +181,7 @@ async def handle_save(
         "version_id": version.get("id"),
         "version_number": version.get("version_number"),
         "timestamp": time.time(),
+        "conflicts": conflict_notifications if conflict_notifications else None,
     })
     
     # Broadcast save notification to other users
@@ -146,6 +196,100 @@ async def handle_save(
         },
         exclude_user=user["id"],
     )
+    
+    # Clear pending changes after successful save
+    sync_manager.clear_pending_changes(document_id)
+
+
+def _extract_modified_nodes(
+    old_content: dict[str, Any],
+    new_content: dict[str, Any],
+) -> dict[str, dict[str, Any]]:
+    """Extract modified nodes from content diff.
+    
+    Args:
+        old_content: Previous document content
+        new_content: New document content
+        
+    Returns:
+        Dict mapping node_id -> node_content
+    """
+    modified = {}
+    
+    def collect_nodes(node: dict[str, Any], nodes_dict: dict[str, dict[str, Any]]) -> None:
+        """Recursively collect all nodes."""
+        node_id = node.get("id")
+        if node_id:
+            nodes_dict[node_id] = node
+        children = node.get("children", [])
+        if isinstance(children, list):
+            for child in children:
+                collect_nodes(child, nodes_dict)
+    
+    # Collect all nodes from both versions
+    old_nodes = {}
+    new_nodes = {}
+    
+    topic_old = old_content.get("topic")
+    topic_new = new_content.get("topic")
+    
+    if topic_old:
+        collect_nodes(topic_old, old_nodes)
+    if topic_new:
+        collect_nodes(topic_new, new_nodes)
+    
+    # Find modified nodes (different content in new version)
+    for node_id, new_node in new_nodes.items():
+        if node_id in old_nodes:
+            old_node = old_nodes[node_id]
+            # Compare key fields
+            if (new_node.get("text") != old_node.get("text") or
+                new_node.get("memo") != old_node.get("memo")):
+                modified[node_id] = new_node
+        else:
+            # New node added
+            modified[node_id] = new_node
+    
+    return modified
+
+
+def _update_node_in_content(
+    content: dict[str, Any],
+    node_id: str,
+    new_node_content: dict[str, Any],
+) -> dict[str, Any]:
+    """Update a specific node in document content.
+    
+    Args:
+        content: Document content
+        node_id: Node to update
+        new_node_content: New node content
+        
+    Returns:
+        Updated content dict
+    """
+    def update_node(node: dict[str, Any], target_id: str, new_content: dict[str, Any]) -> bool:
+        """Recursively update a node by ID. Returns True if updated."""
+        if node.get("id") == target_id:
+            # Update text and memo
+            if "text" in new_content:
+                node["text"] = new_content["text"]
+            if "memo" in new_content:
+                node["memo"] = new_content["memo"]
+            return True
+        
+        children = node.get("children", [])
+        if isinstance(children, list):
+            for child in children:
+                if update_node(child, target_id, new_content):
+                    return True
+        return False
+    
+    topic = content.get("topic")
+    if topic:
+        update_node(topic, node_id, new_node_content)
+    
+    return content
 
 
 @router.websocket("/ws/documents/{document_id}")

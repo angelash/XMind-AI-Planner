@@ -335,7 +335,7 @@ tasks:
   title: 云端同步
   depends_on:
   - RT-02
-  status: developing
+  status: done
 - id: GAP-07
   milestone: M5
   title: OT/CRDT 鍐茬獊澶勭悊

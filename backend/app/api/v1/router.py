@@ -1,6 +1,7 @@
 ﻿from fastapi import APIRouter
 
 from app.api.v1.endpoints.ai import router as ai_router
+from app.api.v1.endpoints.ai_enhancements import router as ai_enhancements_router
 from app.api.v1.endpoints.artifacts import router as artifacts_router
 from app.api.v1.endpoints.auth import router as auth_router
 from app.api.v1.endpoints.commit_workspace import router as commit_workspace_router
@@ -24,6 +25,7 @@ router.include_router(system_router, prefix='/system', tags=['system'])
 router.include_router(auth_router, prefix='/auth', tags=['auth'])
 router.include_router(users_router, prefix='/users', tags=['users'])
 router.include_router(ai_router, prefix='/ai', tags=['ai'])
+router.include_router(ai_enhancements_router, prefix='/ai', tags=['ai-enhancements'])
 router.include_router(export_router, prefix='/export', tags=['export'])
 router.include_router(imports_router, prefix='/import', tags=['import'])
 router.include_router(documents_router, prefix='/documents', tags=['documents'])

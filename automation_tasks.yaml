@@ -350,10 +350,10 @@ tasks:
   status: done
 - id: GAP-09
   milestone: M5
-  title: AI 澧炲己锛堢画鍐?娑﹁壊/缈昏瘧锛?
+  title: AI 增强（绘图/染色/翻译）
   depends_on:
   - CORE-03
-  status: waiting
+  status: developing
 - id: REL-01
   milestone: M5
   title: 全量回归与发布验收

@@ -353,7 +353,7 @@ tasks:
   title: AI 增强（绘图/染色/翻译）
   depends_on:
   - CORE-03
-  status: developing
+  status: done
 - id: REL-01
   milestone: M5
   title: 全量回归与发布验收

@@ -9,8 +9,8 @@ AG-02 should provide:
 """
 
 import os
-import tempfile
 import sqlite3
+import tempfile
 from pathlib import Path
 
 import pytest
@@ -19,42 +19,28 @@ import pytest
 # ============ Conversation Store Tests ============
 
 @pytest.fixture
-def temp_db():
+def temp_db(monkeypatch):
     """Create a temporary database for testing."""
     with tempfile.TemporaryDirectory() as tmpdir:
         db_path = Path(tmpdir) / "test.db"
 
-        # Run migrations manually
-        migrations_dir = Path(__file__).resolve().parent.parent / "backend" / "app" / "db" / "migrations"
-
-        conn = sqlite3.connect(db_path)
-        conn.row_factory = sqlite3.Row
-
-        # Enable foreign keys for cascade delete to work
-        conn.execute("PRAGMA foreign_keys = ON")
-
-        # Run all migrations
-        for migration_file in sorted(migrations_dir.glob("*.sql")):
-            sql = migration_file.read_text(encoding="utf-8")
-            conn.executescript(sql)
-
-        conn.close()
-
         # Set environment variable for database path
-        old_env = os.environ.get("XMIND_DB_PATH")
-        os.environ["XMIND_DB_PATH"] = str(db_path)
+        monkeypatch.setenv("DB_PATH", str(db_path))
+
+        # Clear settings cache to pick up new DB path
+        from app.core.settings import get_settings
+        get_settings.cache_clear()
 
         yield db_path
-
-        # Cleanup
-        if old_env is not None:
-            os.environ["XMIND_DB_PATH"] = old_env
-        else:
-            os.environ.pop("XMIND_DB_PATH", None)
 
 
 def test_conversation_migration_tables_exist(temp_db):
     """Migration 0008 should create conversations, messages, and node_modifications tables."""
+    # Trigger migration by calling any production code
+    from app.services.document_store import create_document
+    create_document("Trigger Migration", {"id": "root", "text": "Root"}, "user-1")
+
+    # Now check the tables exist
     conn = sqlite3.connect(temp_db)
     conn.row_factory = sqlite3.Row
 

@@ -12,7 +12,6 @@ from __future__ import annotations
 import json
 import os
 import tempfile
-import sqlite3
 from pathlib import Path
 from unittest.mock import AsyncMock, patch, MagicMock
 import asyncio
@@ -24,45 +23,19 @@ from fastapi.testclient import TestClient
 # ============ Fixtures ============
 
 @pytest.fixture
-def temp_db():
+def temp_db(monkeypatch):
     """Create a temporary database for testing."""
     with tempfile.TemporaryDirectory() as tmpdir:
         db_path = Path(tmpdir) / "test.db"
 
-        # Run migrations manually
-        migrations_dir = Path(__file__).resolve().parent.parent / "backend" / "app" / "db" / "migrations"
-
-        conn = sqlite3.connect(db_path)
-        conn.row_factory = sqlite3.Row
-
-        # Enable foreign keys for cascade delete to work
-        conn.execute("PRAGMA foreign_keys = ON")
-
-        # Run all migrations
-        for migration_file in sorted(migrations_dir.glob("*.sql")):
-            sql = migration_file.read_text(encoding="utf-8")
-            conn.executescript(sql)
-
-        conn.close()
-
         # Set environment variable for database path
-        old_env = os.environ.get("XMIND_DB_PATH")
-        os.environ["XMIND_DB_PATH"] = str(db_path)
+        monkeypatch.setenv("DB_PATH", str(db_path))
 
         # Clear cached settings so it picks up the new database path
         from app.core.settings import get_settings
         get_settings.cache_clear()
 
         yield db_path
-
-        # Cleanup
-        if old_env is not None:
-            os.environ["XMIND_DB_PATH"] = old_env
-        else:
-            os.environ.pop("XMIND_DB_PATH", None)
-
-        # Clear cache again for next test
-        get_settings.cache_clear()
 
 
 @pytest.fixture

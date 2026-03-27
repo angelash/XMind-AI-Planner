@@ -10,7 +10,6 @@ AG-03 should provide:
 
 import os
 import tempfile
-import sqlite3
 from pathlib import Path
 
 import pytest
@@ -19,36 +18,19 @@ import pytest
 # ============ Test Fixtures ============
 
 @pytest.fixture
-def temp_db():
+def temp_db(monkeypatch):
     """Create a temporary database for testing."""
     with tempfile.TemporaryDirectory() as tmpdir:
         db_path = Path(tmpdir) / "test.db"
 
-        # Run migrations manually
-        migrations_dir = Path(__file__).resolve().parent.parent / "backend" / "app" / "db" / "migrations"
-
-        conn = sqlite3.connect(db_path)
-        conn.row_factory = sqlite3.Row
-        conn.execute("PRAGMA foreign_keys = ON")
-
-        # Run all migrations
-        for migration_file in sorted(migrations_dir.glob("*.sql")):
-            sql = migration_file.read_text(encoding="utf-8")
-            conn.executescript(sql)
-
-        conn.close()
-
         # Set environment variable for database path
-        old_env = os.environ.get("XMIND_DB_PATH")
-        os.environ["XMIND_DB_PATH"] = str(db_path)
+        monkeypatch.setenv("DB_PATH", str(db_path))
+
+        # Clear settings cache to pick up new DB path
+        from app.core.settings import get_settings
+        get_settings.cache_clear()
 
         yield db_path
-
-        # Cleanup
-        if old_env is not None:
-            os.environ["XMIND_DB_PATH"] = old_env
-        else:
-            os.environ.pop("XMIND_DB_PATH", None)
 
 
 @pytest.fixture

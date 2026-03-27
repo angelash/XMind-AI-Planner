@@ -347,7 +347,7 @@ tasks:
   title: 模板库
   depends_on:
   - DOC-01
-  status: developing
+  status: done
 - id: GAP-09
   milestone: M5
   title: AI 澧炲己锛堢画鍐?娑﹁壊/缈昏瘧锛?

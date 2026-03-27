@@ -1169,3 +1169,87 @@ main {
   background: #fecaca;
 }
 
+/* AI Enhancements Modal Styles (GAP-09) */
+.translation-original,
+.diagram-source,
+.color-source {
+  padding: 12px;
+  background: #f3f4f6;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  font-size: 14px;
+  line-height: 1.5;
+  margin-bottom: 12px;
+}
+
+.translation-result,
+.diagram-result,
+.color-result {
+  padding: 12px;
+  background: #ffffff;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  min-height: 60px;
+}
+
+.translated-text {
+  color: #1f2937;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.diagram-ascii {
+  background: #1f2937;
+  color: #e5e7eb;
+  padding: 16px;
+  border-radius: 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  line-height: 1.4;
+  overflow-x: auto;
+  white-space: pre;
+  margin: 0;
+}
+
+.color-suggestion {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 12px;
+  background: #f9fafb;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+}
+
+.color-preview {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  border: 2px solid #d1d5db;
+  flex-shrink: 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.color-info {
+  flex: 1;
+}
+
+.color-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  background: #f3f4f6;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.loading {
+  color: #6b7280;
+  font-style: italic;
+  font-size: 13px;
+}
+
+.error {
+  color: #dc2626;
+  font-weight: 500;
+}
+

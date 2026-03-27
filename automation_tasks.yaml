@@ -344,10 +344,10 @@ tasks:
   status: done
 - id: GAP-08
   milestone: M5
-  title: 妯℃澘搴?
+  title: 模板库
   depends_on:
   - DOC-01
-  status: waiting
+  status: developing
 - id: GAP-09
   milestone: M5
   title: AI 澧炲己锛堢画鍐?娑﹁壊/缈昏瘧锛?

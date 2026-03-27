@@ -56,9 +56,71 @@
         </div>
       </aside>
     </div>
+
+    <!-- Template Library Modal -->
+    <div id="template-modal" class="modal hidden">
+      <div class="modal-content template-modal-content">
+        <div class="modal-header">
+          <h2>模板库</h2>
+          <button id="btn-close-template-modal" class="btn-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="template-toolbar">
+            <button id="btn-create-template" class="btn btn-primary">创建模板</button>
+            <select id="template-category-filter" class="template-filter">
+              <option value="">全部分类</option>
+            </select>
+          </div>
+          <div id="template-list" class="template-list">
+            <div class="template-loading">加载中...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Create Template Modal -->
+    <div id="template-create-modal" class="modal hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>创建模板</h2>
+          <button id="btn-cancel-create-template" class="btn-close">&times;</button>
+        </div>
+        <form id="template-create-form" class="modal-body">
+          <div class="form-group">
+            <label for="template-title-input">标题 *</label>
+            <input id="template-title-input" type="text" required placeholder="模板标题">
+          </div>
+          <div class="form-group">
+            <label for="template-description-input">描述</label>
+            <textarea id="template-description-input" rows="3" placeholder="模板描述（可选）"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="template-category-input">分类</label>
+            <input id="template-category-input" type="text" placeholder="分类（可选）">
+          </div>
+          <div class="form-group">
+            <label for="template-tags-input">标签</label>
+            <input id="template-tags-input" type="text" placeholder="标签，用逗号分隔（可选）">
+          </div>
+          <div class="form-group">
+            <label>
+              <input id="template-public-check" type="checkbox">
+              公开模板
+            </label>
+          </div>
+          <input id="template-content-input" type="hidden">
+          <div class="modal-footer">
+            <button type="submit" class="btn btn-primary">创建</button>
+            <button type="button" id="btn-cancel-create-template" class="btn btn-secondary">取消</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <script type="module" src="./src/main.js"></script>
     <script type="module" src="./src/agent.js"></script>
     <script type="module" src="./src/fileTree.js"></script>
     <script type="module" src="./src/mdEditor.js"></script>
+    <script type="module" src="./src/templates.js"></script>
   </body>
 </html>

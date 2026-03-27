@@ -14,6 +14,7 @@ from app.api.v1.endpoints.projects import router as projects_router
 from app.api.v1.endpoints.review import router as review_router
 from app.api.v1.endpoints.shares import router as shares_router
 from app.api.v1.endpoints.system import router as system_router
+from app.api.v1.endpoints.templates import router as templates_router
 from app.api.v1.endpoints.users import router as users_router
 from app.api.v1.endpoints.websocket import router as websocket_router
 from app.api.v1.endpoints.workspace import router as workspace_router
@@ -36,3 +37,4 @@ router.include_router(dev_tasks_router, prefix='/dev-tasks', tags=['dev-tasks'])
 router.include_router(artifacts_router, prefix='/artifacts', tags=['artifacts'])
 router.include_router(commit_workspace_router, prefix='/commit-workspace', tags=['commit-workspace'])
 router.include_router(file_tree_router, prefix='/projects', tags=['file-tree'])
+router.include_router(templates_router, tags=['templates'])

@@ -8,6 +8,7 @@ import {
   bindToolbarButtons,
   CommandType,
 } from "./history.js";
+import { initAIEnhancements } from "./aiEnhancements.js";
 
 const mount = document.getElementById("mindmap");
 const fallback = document.getElementById("fallback");
@@ -38,6 +39,7 @@ const defaultNode = {
 
 let mind = null;
 let selectedNode = null;
+let aiEnhancements = null;
 
 function showFallback(message) {
   fallback.textContent = message;
@@ -81,8 +83,16 @@ function installSelectionListener() {
     // Update agent panel context
     if (node && node.id && node.topic) {
       setContextNode(node.id, node.topic);
+      // Update AI enhancements
+      if (aiEnhancements) {
+        aiEnhancements.updateSelectedNode(node.id, node.topic);
+      }
     } else {
       clearContextNode();
+      // Update AI enhancements with null
+      if (aiEnhancements) {
+        aiEnhancements.updateSelectedNode(null, null);
+      }
     }
   });
 }
@@ -452,7 +462,10 @@ if (window.MindElixir && mount) {
   // Initialize history manager for undo/redo (GAP-01)
   initHistoryManager(mind);
   bindToolbarButtons();
-  
+
+  // Initialize AI enhancements (GAP-09)
+  aiEnhancements = initAIEnhancements();
+
   installSelectionListener();
   installFileTreeListener();
   bindControls();
